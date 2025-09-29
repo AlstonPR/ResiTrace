@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+    <!-- Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* A slightly cooler background */
+        }
+        /* View switching transitions */
+        .view {
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+            will-change: opacity, transform;
+        }
+        .view.hidden {
+            opacity: 0;
+            transform: scale(0.98);
+            pointer-events: none;
+        }
+        /* Map specific styles */
+        #map { 
+            width: 100%; 
+            height: 100%;
+        }
+        .info-panel {
+            position: absolute; top: 10px; left: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px; border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 1000; max-width: 250px;
+        }
+        .info-panel h3 { margin: 0 0 5px 0; color: #d63031; font-size: 16px; }
+        .close-btn { position: absolute; top: 5px; right: 10px; font-size: 24px; font-weight: bold; color: #aaa; cursor: pointer; line-height: 1; }
+        .close-btn:hover { color: #333; }
+        .legend { position: absolute; bottom: 10px; right: 10px; background: rgba(255, 255, 255, 0.9); padding: 10px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 1000; }
+        .legend h4 { margin: 0 0 5px 0; font-size: 14px; }
+        .legend-item { display: flex; align-items: center; margin: 3px 0; }
+        .legend-color { width: 18px; height: 18px; margin-right: 8px; border-radius: 2px; }
+        .custom-popup { width: 250px; }
+        .popup-title { font-weight: bold; color: #d63031; margin-bottom: 8px; font-size: 16px; }
+        .popup-section-title { font-weight: bold; color: #333; margin-top: 12px; margin-bottom: 5px; border-bottom: 1px solid #eee; padding-bottom: 3px; }
+        .popup-stat { margin: 4px 0; font-size: 14px; }
+        .stat-value { font-weight: bold; color: #2d3436; }
+        .leaflet-control-zoom { border: 1px solid #ccc !important; border-radius: 8px !important; box-shadow: 0 1px 5px rgba(0,0,0,0.2) !important; }
+    </style>
+</head>
+<body class="bg-gray-200 flex items-center justify-center min-h-screen p-4">
+
+    <!-- Phone Screen -->
+    <div class="w-full max-w-[400px] h-[844px] bg-gray-100 rounded-[30px] overflow-hidden relative shadow-2xl">
+        
+        <!-- Initial View: Main Login Options -->
+        <div id="initial-view" class="view absolute inset-0 flex items-center justify-center p-6">
+            <div class="w-full bg-white p-8 rounded-xl shadow-md text-center">
+                    <h1 class="text-3xl font-bold text-gray-800 mb-2">Welcome</h1>
+                    <p class="text-gray-500 mb-8">Please select your login method.</p>
+                    <div class="space-y-4">
+                        <button id="corporative-btn" class="w-full bg-blue-500 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-600 transition duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                            Corporative
+                        </button>
+                        <button id="research-btn" class="w-full bg-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-lg hover:bg-gray-300 transition duration-300 focus:outline-none focus:ring-2 focus:ring-gray-400">
+                            Research & Development
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Corporative Login View -->
+            <div id="corporative-view" class="view absolute inset-0 p-6 hidden overflow-y-auto bg-white">
+                <div class="w-full">
+                    <div class="flex items-center mb-8">
+                        <button id="back-btn" class="text-gray-500 hover:text-gray-800 transition mr-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                        </button>
+                        <h1 class="text-2xl font-bold text-gray-800">Corporative Login</h1>
+                    </div>
+                    <form id="corporative-form" class="space-y-6">
+                        <!-- State Selection -->
+                        <div>
+                            <label for="region" class="block text-sm font-medium text-gray-700 mb-1">State</label>
+                            <select id="region" name="region" class="w-full px-4 py-3 bg-gray-100 border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                                <option value="">Select a State</option>
+                                <option>Karnataka</option>
+                                <option>Delhi</option>
+                                <option>Maharashtra</option>
+                            </select>
+                        </div>
+                        <!-- District Selection -->
+                        <div id="sub-region-container" class="hidden">
+                            <label for="sub-region" class="block text-sm font-medium text-gray-700 mb-1">City / District</label>
+                            <select id="sub-region" name="sub-region" class="w-full px-4 py-3 bg-gray-100 border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                                <option value="">Select a City/District</option>
+                                <option>Mangaluru</option>
+                                <option>Bengaluru</option>
+                                <option>Mysuru</option>
+                            </select>
+                        </div>
+                        <!-- Taluk/Office Selection -->
+                        <div id="corporative-container" class="hidden">
+                            <label for="corporative-select" class="block text-sm font-medium text-gray-700 mb-1">Region / Taluk</label>
+                            <select id="corporative-select" name="corporative" class="w-full px-4 py-3 bg-gray-100 border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"></select>
+                        </div>
+                        <!-- Mobile & OTP -->
+                        <div>
+                            <label for="mobile" class="block text-sm font-medium text-gray-700 mb-1">Mobile Number</label>
+                            <div class="flex">
+                                <input type="tel" id="mobile" name="mobile" placeholder="Enter mobile number" class="flex-grow w-full px-4 py-3 bg-gray-100 border-gray-100 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <button type="button" id="send-otp-btn" class="bg-gray-200 text-gray-700 font-semibold px-4 rounded-r-lg hover:bg-gray-300 whitespace-nowrap">Send OTP</button>
+                            </div>
+                        </div>
+                        <div id="otp-container" class="hidden">
+                            <label for="otp" class="block text-sm font-medium text-gray-700 mb-1">OTP</label>
+                            <input type="text" id="otp" name="otp" inputmode="numeric" pattern="\d{6}" maxlength="6" placeholder="Enter 6-digit OTP" class="w-full px-4 py-3 bg-gray-100 border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <p id="otp-message" class="text-sm text-green-600 mt-2 hidden">An OTP has been sent.</p>
+                        </div>
+                        <!-- Login Button -->
+                        <div class="pt-4">
+                            <button type="submit" class="w-full bg-blue-500 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-600 transition">Login</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Research & Development Login View -->
+            <div id="research-view" class="view absolute inset-0 p-6 hidden overflow-y-auto bg-white">
+                <div class="w-full">
+                    <div class="flex items-center mb-8">
+                        <button id="back-btn-research" class="text-gray-500 hover:text-gray-800 transition mr-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        </button>
+                        <h1 class="text-2xl font-bold text-gray-800">R&D Login</h1>
+                    </div>
+                    <form id="research-form" class="space-y-6">
+                        <!-- Email -->
+                        <div>
+                            <label for="research-email" class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                            <input type="email" id="research-email" name="email" placeholder="Enter your institutional email" class="w-full px-4 py-3 bg-gray-100 border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
+                        </div>
+                        <!-- Password -->
+                        <div>
+                            <label for="research-password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                            <input type="password" id="research-password" name="password" placeholder="Enter your password" class="w-full px-4 py-3 bg-gray-100 border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
+                        </div>
+                         <!-- Access Key -->
+                        <div>
+                            <label for="research-access-key" class="block text-sm font-medium text-gray-700 mb-1">Access Key</label>
+                            <input type="text" id="research-access-key" name="access-key" placeholder="Enter your research access key" class="w-full px-4 py-3 bg-gray-100 border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
+                        </div>
+                        <!-- Login Button -->
+                        <div class="pt-4">
+                            <button type="submit" class="w-full bg-purple-500 text-white font-semibold py-3 px-4 rounded-lg hover:bg-purple-600 transition">Login</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- R&D Dashboard View -->
+            <div id="research-dashboard-view" class="view hidden absolute inset-0 flex flex-col bg-gray-100 p-4 space-y-4 overflow-y-auto">
+                <!-- Header -->
+                <div class="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center flex-shrink-0">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold">ER</div>
+                        <div>
+                            <h2 class="text-lg font-bold text-gray-800">Dr. Evelyn Reed</h2>
+                            <p class="text-sm font-semibold text-gray-500">Principal Investigator</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button id="profile-settings-btn" class="text-gray-500 hover:text-purple-600 p-2 rounded-full hover:bg-gray-100 transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        </button>
+                        <button id="logout-btn-research" class="text-sm bg-red-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-600 transition">Logout</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Dashboard View -->
+            <div id="map-view" class="view absolute inset-0 hidden flex flex-col bg-gray-100 p-4 space-y-4 overflow-y-auto">
+                <!-- Header Card -->
+                <div class="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center flex-shrink-0">
+                    <div>
+                        <h2 class="text-sm font-semibold text-gray-500">Corporation ID</h2>
+                        <p id="corp-id" class="text-lg font-bold text-gray-800">PUTTUR-DK-KA-0124</p>
+                    </div>
+                    <button id="logout-btn" class="text-sm bg-red-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-600 transition">Logout</button>
+                </div>
+                
+                <!-- 2x2 Stats Grid -->
+                <div class="grid grid-cols-2 gap-4 flex-shrink-0">
+                    <!-- Registered Farmers Card -->
+                    <div class="bg-teal-50 p-4 rounded-xl shadow-sm flex flex-col justify-between">
+                        <div class="flex justify-between items-start">
+                            <h3 class="font-semibold text-teal-800 text-sm">Registered Farmers</h3>
+                            <div class="bg-teal-100 p-2 rounded-lg">
+                                <svg class="w-5 h-5 text-teal-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                            </div>
+                        </div>
+                        <div class="flex items-end space-x-2 mt-2">
+                            <p class="text-xl font-bold text-teal-900">1,284</p>
+                            <div class="flex items-center text-green-600">
+                                <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L6.22 8.77a.75.75 0 01-1.06-1.06l4.25-4.25a.75.75 0 011.06 0l4.25 4.25a.75.75 0 01-1.06 1.06L10.75 5.612V16.25A.75.75 0 0110 17z" clip-rule="evenodd" /></svg>
+                                <p class="text-sm font-semibold">+5.2%</p>
+                            </div>
+                        </div>
+                    </div>
+                     <!-- Total Animals Card -->
+                    <div class="bg-teal-50 p-4 rounded-xl shadow-sm flex flex-col justify-between">
+                        <div class="flex justify-between items-start">
+                            <h3 class="font-semibold text-teal-800 text-sm">Total Animals</h3>
+                            <div class="bg-teal-100 p-2 rounded-lg">
+                               <svg class="w-5 h-5 text-teal-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="1.5">
+                                    <path d="M12 15.5C15.3137 15.5 18 12.8137 18 9.5C18 6.18629 15.3137 3.5 12 3.5C8.68629 3.5 6 6.18629 6 9.5C6 12.8137 8.68629 15.5 12 15.5Z" stroke-linecap="round" stroke-linejoin="round"></path>
+                                    <path d="M7 6.5C7.5 5 9 3.5 12 3.5C15 3.5 16.5 5 17 6.5" stroke-linecap="round" stroke-linejoin="round"></path>
+                                    <path d="M14.5 11C14.5 11.2761 14.2761 11.5 14 11.5C13.7239 11.5 13.5 11.2761 13.5 11C13.5 10.7239 13.7239 10.5 14 10.5C14.2761 10.5 14.5 10.7239 14.5 11Z" fill="currentColor"></path>
+                                    <path d="M10.5 11C10.5 11.2761 10.2761 11.5 10 11.5C9.72386 11.5 9.5 11.2761 9.5 11C9.5 10.7239 9.72386 10.5 10 10.5C10.2761 10.5 10.5 10.7239 10.5 11Z" fill="currentColor"></path>
+                                    <path d="M12 20.5C12 20.5 16 17.5 16 15.5H8C8 17.5 12 20.5 12 20.5Z" stroke-linecap="round" stroke-linejoin="round"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-xl font-bold text-teal-900 mt-2">4,650</p>
+                        </div>
+                    </div>
+                     <!-- Average AMU Card -->
+                    <div class="bg-teal-50 p-4 rounded-xl shadow-sm flex flex-col justify-between">
+                        <div class="flex justify-between items-start">
+                            <h3 class="font-semibold text-teal-800 text-sm">Average AMU</h3>
+                            <div class="bg-teal-100 p-1.5 rounded-lg">
+                                <svg class="w-5 h-5 text-teal-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 7.5V6a2.25 2.25 0 012.25-2.25h3A2.25 2.25 0 0118 6v1.5m-12 0h12v12a2.25 2.25 0 01-2.25 2.25h-7.5A2.25 2.25 0 016 20.25V7.5z" />
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 7.5h7.5" />
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 11.25v3.75m1.875-1.875H10.125" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex items-center text-green-600 mt-2">
+                               <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L6.22 8.77a.75.75 0 01-1.06-1.06l4.25-4.25a.75.75 0 011.06 0l4.25 4.25a.75.75 0 01-1.06 1.06L10.75 5.612V16.25A.75.75 0 0110 17z" clip-rule="evenodd" /></svg>
+                                <p class="text-sm font-semibold">+1.5%</p>
+                            </div>
+                            <p class="text-xl font-bold text-teal-900 mt-1">23<span class="text-lg font-medium text-teal-700">mg/kg</span></p>
+                        </div>
+                    </div>
+                     <!-- Compliance Rate Card -->
+                    <div class="bg-teal-50 p-4 rounded-xl shadow-sm flex flex-col justify-between">
+                        <div class="flex justify-between items-start">
+                           <h3 class="font-semibold text-teal-800 text-sm">Compliance Rate</h3>
+                           <div class="bg-teal-100 p-1.5 rounded-lg">
+                               <svg class="w-5 h-5 text-teal-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.286zm0 13.036h.008v.008h-.008v-.008z" /></svg>
+                           </div>
+                        </div>
+                        <div>
+                            <p class="text-xl font-bold text-teal-900 mt-2">95%</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Map Card -->
+                <div id="map-card" class="bg-white rounded-xl shadow-sm flex flex-col h-96 flex-shrink-0">
+                    <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                        <h3 class="text-lg font-bold text-gray-800">Regional Heatmap</h3>
+                        <button id="expand-map-btn" class="text-gray-400 hover:text-gray-700">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 0h-4m4 0l-5-5" /></svg>
+                        </button>
+                    </div>
+                    <div id="map-card-content" class="flex-grow relative rounded-b-xl overflow-hidden">
+                        <!-- Map and overlays will be initialized here -->
+                    </div>
+                </div>
+
+                <!-- AMU Usage Chart Card -->
+                <div id="chart-card" class="bg-white rounded-xl shadow-sm flex flex-col flex-shrink-0">
+                    <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                        <h3 id="chart-title" class="text-lg font-bold text-gray-800">AMU Usage – Puttur</h3>
+                        <button id="expand-chart-btn" class="text-gray-400 hover:text-gray-700">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 0h-4m4 0l-5-5" /></svg>
+                        </button>
+                    </div>
+                    <div id="chart-card-content" class="p-4">
+                        <div class="h-64 relative">
+                            <canvas id="amuChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Registered Farmers Card -->
+                <div class="bg-white rounded-xl shadow-sm flex flex-col flex-shrink-0">
+                    <div class="p-4 flex justify-between items-center">
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-800">Registered Farmers</h3>
+                            <p class="text-sm text-gray-500">Monitor farmer activity and compliance</p>
+                        </div>
+                        <button id="view-all-farmers-btn" class="flex items-center space-x-2 bg-gray-200 text-gray-700 font-semibold py-2 px-3 rounded-lg hover:bg-gray-300 transition text-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z" /><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.022 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" /></svg>
+                            <span>View All</span>
+                        </button>
+                    </div>
+                    <div class="p-4 pt-0 space-y-3">
+                        <!-- Farmer 1 -->
+                        <div class="border rounded-lg p-3 flex items-center space-x-3">
+                            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold">RK</div>
+                            <div class="flex-grow">
+                                <p class="font-semibold text-gray-800 whitespace-nowrap">Ram Kumar</p>
+                                <p class="text-xs text-gray-500">Puttur Town, 15 animals</p>
+                            </div>
+                            <div class="w-24 text-right">
+                                <p class="text-sm font-bold text-green-600">92%</p>
+                                <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                                    <div class="bg-green-500 h-1.5 rounded-full" style="width: 92%"></div>
+                                </div>
+                            </div>
+                            <button class="text-gray-400 hover:text-blue-600 p-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.518.759a1.037 1.037 0 00-.54 1.06A11.952 11.952 0 008.5 16.5a1.037 1.037 0 001.06-.54l.759-1.518a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" /></svg>
+                            </button>
+                        </div>
+                        <!-- Farmer 2 -->
+                        <div class="border rounded-lg p-3 flex items-center space-x-3">
+                            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center font-bold">SD</div>
+                            <div class="flex-grow">
+                                <p class="font-semibold text-gray-800 whitespace-nowrap">Sita Devi</p>
+                                <p class="text-xs text-gray-500">Kabaka, 8 animals</p>
+                            </div>
+                            <div class="w-24 text-right">
+                                <p class="text-sm font-bold text-yellow-600">87%</p>
+                                <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                                    <div class="bg-yellow-500 h-1.5 rounded-full" style="width: 87%"></div>
+                                </div>
+                            </div>
+                             <button class="text-gray-400 hover:text-blue-600 p-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.518.759a1.037 1.037 0 00-.54 1.06A11.952 11.952 0 008.5 16.5a1.037 1.037 0 001.06-.54l.759-1.518a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" /></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Veterinarians Card -->
+                <div class="bg-white rounded-xl shadow-sm flex flex-col flex-shrink-0">
+                    <div class="p-4 flex justify-between items-center">
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-800">Active Veterinarians</h3>
+                            <p class="text-sm text-gray-500">Regional vet network</p>
+                        </div>
+                        <button id="view-all-vets-btn" class="flex items-center space-x-2 bg-gray-200 text-gray-700 font-semibold py-2 px-3 rounded-lg hover:bg-gray-300 transition text-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z" /><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.022 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" /></svg>
+                            <span>View All</span>
+                        </button>
+                    </div>
+                    <div class="p-4 pt-0 space-y-3">
+                        <!-- Vet 1 -->
+                        <div class="border rounded-lg p-3 flex items-center space-x-3">
+                            <div class="flex-grow">
+                                <p class="font-semibold text-gray-800">Dr. Priya Sharma</p>
+                                <p class="text-xs text-gray-500"><span class="font-semibold text-indigo-600">Professional</span> · 45 cases</p>
+                            </div>
+                            <div class="w-2.5 h-2.5 bg-green-500 rounded-full flex-shrink-0"></div>
+                             <button class="text-gray-400 hover:text-blue-600 p-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.518.759a1.037 1.037 0 00-.54 1.06A11.952 11.952 0 008.5 16.5a1.037 1.037 0 001.06-.54l.759-1.518a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" /></svg>
+                            </button>
+                        </div>
+                         <!-- Vet 2 -->
+                        <div class="border rounded-lg p-3 flex items-center space-x-3">
+                            <div class="flex-grow">
+                                <p class="font-semibold text-gray-800">Dr. Rajesh Kumar</p>
+                                <p class="text-xs text-gray-500"><span class="font-semibold text-gray-600">Volunteer</span> · 28 cases</p>
+                            </div>
+                            <div class="w-2.5 h-2.5 bg-green-500 rounded-full flex-shrink-0"></div>
+                             <button class="text-gray-400 hover:text-blue-600 p-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.518.759a1.037 1.037 0 00-.54 1.06A11.952 11.952 0 008.5 16.5a1.037 1.037 0 001.06-.54l.759-1.518a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" /></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Regional Performance Card -->
+                <div class="bg-white rounded-xl shadow-sm flex flex-col flex-shrink-0">
+                    <div class="p-4">
+                        <h3 class="text-lg font-bold text-gray-800">Regional Performance</h3>
+                        <p class="text-sm text-gray-500">Key insights and areas for improvement</p>
+                    </div>
+                    <div class="px-4 pb-4">
+                        <button id="view-risk-farms-btn" class="w-full bg-orange-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-orange-600 transition text-sm">
+                            View Farms at High Risk of AMR
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+            
+            <!-- All Farmers List View -->
+            <div id="all-farmers-view" class="view hidden absolute inset-0 bg-white z-50 p-4 flex flex-col">
+                <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                    <button id="back-to-dashboard-btn" class="text-gray-500 hover:text-gray-800 transition p-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                    </button>
+                    <h3 class="text-xl font-bold text-gray-800">All Registered Farmers</h3>
+                    <div class="w-8"></div> <!-- Spacer -->
+                </div>
+                <div class="flex-grow overflow-y-auto space-y-3 pr-2">
+                    <!-- Farmer List Item 1 -->
+                    <div class="border rounded-lg p-3 flex items-center space-x-3">
+                        <div class="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold">RK</div>
+                        <div class="flex-grow">
+                            <p class="font-semibold text-gray-800 whitespace-nowrap">Ram Kumar</p>
+                            <p class="text-xs text-gray-500">Puttur Town, 15 animals</p>
+                        </div>
+                        <div class="w-24 text-right">
+                            <p class="text-sm font-bold text-green-600">92%</p>
+                            <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                                <div class="bg-green-500 h-1.5 rounded-full" style="width: 92%"></div>
+                            </div>
+                        </div>
+                        <button class="text-gray-400 hover:text-blue-600 p-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.518.759a1.037 1.037 0 00-.54 1.06A11.952 11.952 0 008.5 16.5a1.037 1.037 0 001.06-.54l.759-1.518a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg>
+                        </button>
+                    </div>
+                    <!-- Farmer List Item 2 -->
+                    <div class="border rounded-lg p-3 flex items-center space-x-3">
+                        <div class="flex-shrink-0 w-10 h-10 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center font-bold">SD</div>
+                        <div class="flex-grow">
+                            <p class="font-semibold text-gray-800 whitespace-nowrap">Sita Devi</p>
+                            <p class="text-xs text-gray-500">Kabaka, 8 animals</p>
+                        </div>
+                        <div class="w-24 text-right">
+                            <p class="text-sm font-bold text-yellow-600">87%</p>
+                             <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                                <div class="bg-yellow-500 h-1.5 rounded-full" style="width: 87%"></div>
+                            </div>
+                        </div>
+                         <button class="text-gray-400 hover:text-blue-600 p-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.518.759a1.037 1.037 0 00-.54 1.06A11.952 11.952 0 008.5 16.5a1.037 1.037 0 001.06-.54l.759-1.518a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg>
+                        </button>
+                    </div>
+                    <!-- Farmer List Item 3 -->
+                    <div class="border rounded-lg p-3 flex items-center space-x-3">
+                        <div class="flex-shrink-0 w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">AG</div>
+                        <div class="flex-grow">
+                            <p class="font-semibold text-gray-800 whitespace-nowrap">Anil Gowda</p>
+                            <p class="text-xs text-gray-500">Bolwar, 22 animals</p>
+                        </div>
+                        <div class="w-24 text-right">
+                            <p class="text-sm font-bold text-green-600">98%</p>
+                            <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                                <div class="bg-green-500 h-1.5 rounded-full" style="width: 98%"></div>
+                            </div>
+                        </div>
+                         <button class="text-gray-400 hover:text-blue-600 p-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.518.759a1.037 1.037 0 00-.54 1.06A11.952 11.952 0 008.5 16.5a1.037 1.037 0 001.06-.54l.759-1.518a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg>
+                        </button>
+                    </div>
+                    <!-- Farmer List Item 4 -->
+                    <div class="border rounded-lg p-3 flex items-center space-x-3">
+                        <div class="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 text-red-700 flex items-center justify-center font-bold">SN</div>
+                        <div class="flex-grow">
+                            <p class="font-semibold text-gray-800 whitespace-nowrap">Sunita Naik</p>
+                            <p class="text-xs text-gray-500">Savanoor, 35 animals</p>
+                        </div>
+                        <div class="w-24 text-right">
+                            <p class="text-sm font-bold text-red-600">71%</p>
+                             <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                                <div class="bg-red-500 h-1.5 rounded-full" style="width: 71%"></div>
+                            </div>
+                        </div>
+                         <button class="text-gray-400 hover:text-blue-600 p-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.518.759a1.037 1.037 0 00-.54 1.06A11.952 11.952 0 008.5 16.5a1.037 1.037 0 001.06-.54l.759-1.518a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg>
+                        </button>
+                    </div>
+                    <!-- Farmer List Item 5 -->
+                    <div class="border rounded-lg p-3 flex items-center space-x-3">
+                        <div class="flex-shrink-0 w-10 h-10 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold">MB</div>
+                        <div class="flex-grow">
+                            <p class="font-semibold text-gray-800 whitespace-nowrap">Manju Bhat</p>
+                            <p class="text-xs text-gray-500">Nekkilady, 12 animals</p>
+                        </div>
+                        <div class="w-24 text-right">
+                            <p class="text-sm font-bold text-green-600">95%</p>
+                             <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                                <div class="bg-green-500 h-1.5 rounded-full" style="width: 95%"></div>
+                            </div>
+                        </div>
+                         <button class="text-gray-400 hover:text-blue-600 p-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.518.759a1.037 1.037 0 00-.54 1.06A11.952 11.952 0 008.5 16.5a1.037 1.037 0 001.06-.54l.759-1.518a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg>
+                        </button>
+                    </div>
+                     <!-- Farmer List Item 6 -->
+                    <div class="border rounded-lg p-3 flex items-center space-x-3">
+                        <div class="flex-shrink-0 w-10 h-10 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold">PR</div>
+                        <div class="flex-grow">
+                            <p class="font-semibold text-gray-800 whitespace-nowrap">Prakash Rai</p>
+                            <p class="text-xs text-gray-500">Aryapu, 18 animals</p>
+                        </div>
+                        <div class="w-24 text-right">
+                            <p class="text-sm font-bold text-green-600">91%</p>
+                             <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                                <div class="bg-green-500 h-1.5 rounded-full" style="width: 91%"></div>
+                            </div>
+                        </div>
+                         <button class="text-gray-400 hover:text-blue-600 p-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.518.759a1.037 1.037 0 00-.54 1.06A11.952 11.952 0 008.5 16.5a1.037 1.037 0 001.06-.54l.759-1.518a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg>
+                        </button>
+                    </div>
+                     <!-- Farmer List Item 7 -->
+                    <div class="border rounded-lg p-3 flex items-center space-x-3">
+                        <div class="flex-shrink-0 w-10 h-10 rounded-full bg-pink-100 text-pink-700 flex items-center justify-center font-bold">GK</div>
+                        <div class="flex-grow">
+                            <p class="font-semibold text-gray-800 whitespace-nowrap">Geetha K</p>
+                            <p class="text-xs text-gray-500">Panaje, 25 animals</p>
+                        </div>
+                        <div class="w-24 text-right">
+                            <p class="text-sm font-bold text-yellow-600">82%</p>
+                             <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                                <div class="bg-yellow-500 h-1.5 rounded-full" style="width: 82%"></div>
+                            </div>
+                        </div>
+                         <button class="text-gray-400 hover:text-blue-600 p-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.518.759a1.037 1.037 0 00-.54 1.06A11.952 11.952 0 008.5 16.5a1.037 1.037 0 001.06-.54l.759-1.518a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg>
+                        </button>
+                    </div>
+                     <!-- Farmer List Item 8 -->
+                    <div class="border rounded-lg p-3 flex items-center space-x-3">
+                        <div class="flex-shrink-0 w-10 h-10 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center font-bold">SB</div>
+                        <div class="flex-grow">
+                            <p class="font-semibold text-gray-800 whitespace-nowrap">Suresh Bhandary</p>
+                            <p class="text-xs text-gray-500">Bellare, 40 animals</p>
+                        </div>
+                        <div class="w-24 text-right">
+                            <p class="text-sm font-bold text-red-600">65%</p>
+                             <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                                <div class="bg-red-500 h-1.5 rounded-full" style="width: 65%"></div>
+                            </div>
+                        </div>
+                         <button class="text-gray-400 hover:text-blue-600 p-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.518.759a1.037 1.037 0 00-.54 1.06A11.952 11.952 0 008.5 16.5a1.037 1.037 0 001.06-.54l.759-1.518a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- All Veterinarians List View -->
+            <div id="all-vets-view" class="view hidden absolute inset-0 bg-white z-50 p-4 flex flex-col">
+                <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                    <button id="back-to-dashboard-from-vets-btn" class="text-gray-500 hover:text-gray-800 transition p-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                    </button>
+                    <h3 class="text-xl font-bold text-gray-800">All Active Veterinarians</h3>
+                    <div class="w-8"></div> <!-- Spacer -->
+                </div>
+                <div class="flex-grow overflow-y-auto space-y-3 pr-2">
+                    <!-- Vet 1 -->
+                    <div class="border rounded-lg p-3 flex items-center space-x-4">
+                        <div class="flex-grow">
+                            <p class="font-semibold text-gray-800">Dr. Priya Sharma</p>
+                            <p class="text-xs text-gray-500"><span class="font-semibold text-indigo-600">Professional</span> · 45 cases</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-2.5 h-2.5 bg-green-500 rounded-full flex-shrink-0"></div>
+                            <span class="text-xs text-gray-500">Online</span>
+                        </div>
+                        <button class="text-gray-400 hover:text-blue-600 p-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.518.759a1.037 1.037 0 00-.54 1.06A11.952 11.952 0 008.5 16.5a1.037 1.037 0 001.06-.54l.759-1.518a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg>
+                        </button>
+                    </div>
+                    <!-- Vet 2 -->
+                    <div class="border rounded-lg p-3 flex items-center space-x-4">
+                        <div class="flex-grow">
+                            <p class="font-semibold text-gray-800">Dr. Rajesh Kumar</p>
+                            <p class="text-xs text-gray-500"><span class="font-semibold text-gray-600">Volunteer</span> · 28 cases</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-2.5 h-2.5 bg-green-500 rounded-full flex-shrink-0"></div>
+                            <span class="text-xs text-gray-500">Online</span>
+                        </div>
+                        <button class="text-gray-400 hover:text-blue-600 p-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.518.759a1.037 1.037 0 00-.54 1.06A11.952 11.952 0 008.5 16.5a1.037 1.037 0 001.06-.54l.759-1.518a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg>
+                        </button>
+                    </div>
+                    <!-- Vet 3 -->
+                    <div class="border rounded-lg p-3 flex items-center space-x-4">
+                        <div class="flex-grow">
+                            <p class="font-semibold text-gray-800">Dr. Anjali Rao</p>
+                            <p class="text-xs text-gray-500"><span class="font-semibold text-indigo-600">Professional</span> · 52 cases</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-2.5 h-2.5 bg-gray-400 rounded-full flex-shrink-0"></div>
+                            <span class="text-xs text-gray-500">Offline</span>
+                        </div>
+                        <button class="text-gray-400 hover:text-blue-600 p-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.518.759a1.037 1.037 0 00-.54 1.06A11.952 11.952 0 008.5 16.5a1.037 1.037 0 001.06-.54l.759-1.518a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg>
+                        </button>
+                    </div>
+                     <!-- Vet 4 -->
+                    <div class="border rounded-lg p-3 flex items-center space-x-4">
+                        <div class="flex-grow">
+                            <p class="font-semibold text-gray-800">Dr. Mohan Das</p>
+                            <p class="text-xs text-gray-500"><span class="font-semibold text-gray-600">Volunteer</span> · 15 cases</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-2.5 h-2.5 bg-green-500 rounded-full flex-shrink-0"></div>
+                            <span class="text-xs text-gray-500">Online</span>
+                        </div>
+                        <button class="text-gray-400 hover:text-blue-600 p-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.518.759a1.037 1.037 0 00-.54 1.06A11.952 11.952 0 008.5 16.5a1.037 1.037 0 001.06-.54l.759-1.518a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg>
+                        </button>
+                    </div>
+                     <!-- Vet 5 -->
+                    <div class="border rounded-lg p-3 flex items-center space-x-4">
+                        <div class="flex-grow">
+                            <p class="font-semibold text-gray-800">Dr. Sameer Ahmed</p>
+                            <p class="text-xs text-gray-500"><span class="font-semibold text-indigo-600">Professional</span> · 60 cases</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-2.5 h-2.5 bg-green-500 rounded-full flex-shrink-0"></div>
+                            <span class="text-xs text-gray-500">Online</span>
+                        </div>
+                        <button class="text-gray-400 hover:text-blue-600 p-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.518.759a1.037 1.037 0 00-.54 1.06A11.952 11.952 0 008.5 16.5a1.037 1.037 0 001.06-.54l.759-1.518a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg>
+                        </button>
+                    </div>
+                     <!-- Vet 6 -->
+                    <div class="border rounded-lg p-3 flex items-center space-x-4">
+                        <div class="flex-grow">
+                            <p class="font-semibold text-gray-800">Dr. Vidya Shenoy</p>
+                            <p class="text-xs text-gray-500"><span class="font-semibold text-gray-600">Volunteer</span> · 22 cases</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-2.5 h-2.5 bg-gray-400 rounded-full flex-shrink-0"></div>
+                            <span class="text-xs text-gray-500">Offline</span>
+                        </div>
+                        <button class="text-gray-400 hover:text-blue-600 p-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.518.759a1.037 1.037 0 00-.54 1.06A11.952 11.952 0 008.5 16.5a1.037 1.037 0 001.06-.54l.759-1.518a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg>
+                        </button>
+                    </div>
+                     <!-- Vet 7 -->
+                    <div class="border rounded-lg p-3 flex items-center space-x-4">
+                        <div class="flex-grow">
+                            <p class="font-semibold text-gray-800">Dr. Naveen Alva</p>
+                            <p class="text-xs text-gray-500"><span class="font-semibold text-indigo-600">Professional</span> · 75 cases</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-2.5 h-2.5 bg-green-500 rounded-full flex-shrink-0"></div>
+                            <span class="text-xs text-gray-500">Online</span>
+                        </div>
+                        <button class="text-gray-400 hover:text-blue-600 p-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.518.759a1.037 1.037 0 00-.54 1.06A11.952 11.952 0 008.5 16.5a1.037 1.037 0 001.06-.54l.759-1.518a1 1 0 011.06-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Disease Outbreak Modal -->
+            <div id="disease-modal" class="view hidden absolute inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-8">
+                <div class="bg-white rounded-2xl p-6 shadow-xl w-full max-w-sm text-center transform transition-all">
+                     <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                        <svg class="h-6 w-6 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    </div>
+                    <h3 class="text-lg leading-6 font-bold text-gray-900">Disease Outbreak Alert</h3>
+                    <div class="mt-2 px-2 py-3">
+                        <p class="text-sm text-gray-500">
+                            A high number of Avian Influenza cases have been reported in the Sullia region. Please implement biosecurity protocols immediately.
+                        </p>
+                    </div>
+                    <div class="mt-4">
+                        <button id="close-disease-modal-btn" type="button" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-500 text-base font-medium text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm">
+                            Notify Farmers and Vets
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fullscreen Modals -->
+            <!-- Map Modal -->
+            <div id="map-modal" class="view hidden absolute inset-0 bg-white z-50 p-4 flex flex-col">
+                <div class="flex justify-between items-center mb-2 flex-shrink-0">
+                    <h3 class="text-lg font-bold text-gray-800">Full Screen Map</h3>
+                    <button id="close-map-modal-btn" class="text-gray-600 hover:text-gray-900">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div id="map-modal-content" class="flex-grow relative rounded-lg overflow-hidden border">
+                    <!-- Map div will be moved here -->
+                </div>
+            </div>
+
+            <!-- Chart Modal -->
+            <div id="chart-modal" class="view hidden absolute inset-0 bg-white z-50 p-4 flex flex-col">
+                <div class="flex justify-between items-center mb-2 flex-shrink-0">
+                    <h3 class="text-lg font-bold text-gray-800">Full Screen AMU Usage</h3>
+                    <button id="close-chart-modal-btn" class="text-gray-600 hover:text-gray-900">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div id="chart-modal-content" class="flex-grow relative">
+                    <!-- Chart canvas will be moved here -->
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- JS Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Views and Modals
+            const initialView = document.getElementById('initial-view');
+            const corporativeView = document.getElementById('corporative-view');
+            const mapView = document.getElementById('map-view');
+            const mapModal = document.getElementById('map-modal');
+            const chartModal = document.getElementById('chart-modal');
+            const allFarmersView = document.getElementById('all-farmers-view');
+            const allVetsView = document.getElementById('all-vets-view');
+            const researchView = document.getElementById('research-view');
+            const researchDashboardView = document.getElementById('research-dashboard-view');
+
+
+            // Buttons
+            const corporativeBtn = document.getElementById('corporative-btn');
+            const researchBtn = document.getElementById('research-btn');
+            const backBtn = document.getElementById('back-btn');
+            const backBtnResearch = document.getElementById('back-btn-research');
+            const sendOtpBtn = document.getElementById('send-otp-btn');
+            const logoutBtn = document.getElementById('logout-btn');
+            const logoutBtnResearch = document.getElementById('logout-btn-research');
+            const expandMapBtn = document.getElementById('expand-map-btn');
+            const closeMapModalBtn = document.getElementById('close-map-modal-btn');
+            const expandChartBtn = document.getElementById('expand-chart-btn');
+            const closeChartModalBtn = document.getElementById('close-chart-modal-btn');
+            const diseaseModal = document.getElementById('disease-modal');
+            const closeDiseaseModalBtn = document.getElementById('close-disease-modal-btn');
+            const viewAllFarmersBtn = document.getElementById('view-all-farmers-btn');
+            const backToDashboardBtn = document.getElementById('back-to-dashboard-btn');
+            const viewAllVetsBtn = document.getElementById('view-all-vets-btn');
+            const backToDashboardFromVetsBtn = document.getElementById('back-to-dashboard-from-vets-btn');
+            const viewRiskFarmsBtn = document.getElementById('view-risk-farms-btn');
+            const profileSettingsBtn = document.getElementById('profile-settings-btn');
+
+
+            // Forms & Containers
+            const corporativeForm = document.getElementById('corporative-form');
+            const researchForm = document.getElementById('research-form');
+            const otpContainer = document.getElementById('otp-container');
+            const otpMessage = document.getElementById('otp-message');
+            const regionSelect = document.getElementById('region');
+            const subRegionContainer = document.getElementById('sub-region-container');
+            const subRegionSelect = document.getElementById('sub-region');
+            const corporativeContainer = document.getElementById('corporative-container');
+            const corporativeSelect = document.getElementById('corporative-select');
+            const corporativeLabel = document.querySelector('label[for="corporative-select"]');
+            const mapCardContent = document.getElementById('map-card-content');
+            const chartCardContent = document.getElementById('chart-card-content');
+            const mapModalContent = document.getElementById('map-modal-content');
+            const chartModalContent = document.getElementById('chart-modal-content');
+
+            let map; 
+            let mapWrapper; // To hold map and its overlays
+            let isMapInitialized = false;
+            let chart;
+            let isChartInitialized = false;
+
+            const locationsByCity = {
+                'Bengaluru': { /* ... data for Bengaluru ... */ },
+                'Mangaluru': {
+                    label: 'Region / Taluk',
+                    options: ['Puttur', 'Bantwal', 'Sullia', 'Moodabidri', 'Mangaluru City', 'Kadaba']
+                }
+            };
+            
+            // --- View Switching Logic ---
+            corporativeBtn.addEventListener('click', () => {
+                initialView.classList.add('hidden');
+                corporativeView.classList.remove('hidden');
+            });
+
+            backBtn.addEventListener('click', () => {
+                corporativeView.classList.add('hidden');
+                initialView.classList.remove('hidden');
+            });
+
+            researchBtn.addEventListener('click', () => {
+                initialView.classList.add('hidden');
+                researchView.classList.remove('hidden');
+            });
+
+            backBtnResearch.addEventListener('click', () => {
+                researchView.classList.add('hidden');
+                initialView.classList.remove('hidden');
+            });
+
+             logoutBtn.addEventListener('click', () => {
+                mapView.classList.add('hidden');
+                initialView.classList.remove('hidden');
+                corporativeForm.reset(); // Clear the form
+                subRegionContainer.classList.add('hidden');
+                corporativeContainer.classList.add('hidden');
+                otpContainer.classList.add('hidden');
+                otpMessage.classList.add('hidden');
+            });
+            
+            logoutBtnResearch.addEventListener('click', () => {
+                researchDashboardView.classList.add('hidden');
+                initialView.classList.remove('hidden');
+                researchForm.reset();
+            });
+
+            profileSettingsBtn.addEventListener('click', () => {
+                console.log("Profile Settings Clicked");
+            });
+
+            viewAllFarmersBtn.addEventListener('click', () => {
+                mapView.classList.add('hidden');
+                allFarmersView.classList.remove('hidden');
+            });
+
+            backToDashboardBtn.addEventListener('click', () => {
+                allFarmersView.classList.add('hidden');
+                mapView.classList.remove('hidden');
+            });
+
+            viewAllVetsBtn.addEventListener('click', () => {
+                mapView.classList.add('hidden');
+                allVetsView.classList.remove('hidden');
+            });
+
+            backToDashboardFromVetsBtn.addEventListener('click', () => {
+                allVetsView.classList.add('hidden');
+                mapView.classList.remove('hidden');
+            });
+
+
+            // --- Dynamic Dropdown Logic ---
+            regionSelect.addEventListener('change', (event) => {
+                corporativeContainer.classList.add('hidden');
+                subRegionSelect.value = '';
+                if (event.target.value === 'Karnataka') {
+                    subRegionContainer.classList.remove('hidden');
+                } else {
+                    subRegionContainer.classList.add('hidden');
+                }
+            });
+
+            subRegionSelect.addEventListener('change', (event) => {
+                const selectedCity = event.target.value;
+                const cityData = locationsByCity[selectedCity];
+                if (cityData) {
+                    corporativeLabel.textContent = cityData.label;
+                    corporativeSelect.innerHTML = '<option value="">Select a Taluk</option>'; // Clear and add placeholder
+                    cityData.options.forEach(optionText => {
+                        const option = document.createElement('option');
+                        option.value = optionText;
+                        option.textContent = optionText;
+                        corporativeSelect.appendChild(option);
+                    });
+                    corporativeContainer.classList.remove('hidden');
+                } else {
+                    corporativeContainer.classList.add('hidden');
+                }
+            });
+
+            // --- Form Submission & Login Logic ---
+            corporativeForm.addEventListener('submit', (event) => {
+                event.preventDefault();
+                const state = regionSelect.value;
+                const district = subRegionSelect.value;
+                const taluk = corporativeSelect.value;
+
+                // Prototype login condition
+                if (state === 'Karnataka' && district === 'Mangaluru' && taluk === 'Puttur') {
+                    initialView.classList.add('hidden'); 
+                    corporativeView.classList.add('hidden');
+                    mapView.classList.remove('hidden');
+                    
+                    // Show disease alert on login for demo
+                    diseaseModal.classList.remove('hidden');
+
+                    setTimeout(() => {
+                        if (!isMapInitialized) {
+                            initPutturMap();
+                            isMapInitialized = true;
+                        } else {
+                           map.invalidateSize()
+                        }
+                        if (!isChartInitialized) {
+                            initPutturChart();
+                            isChartInitialized = true;
+                        }
+                    }, 150); // A small delay ensures the view is rendered
+
+                } else {
+                    // Using a custom modal/alert in the future would be better than window.alert
+                    console.log('Login successful for your selected region! (Prototype focused on Puttur)');
+                }
+            });
+
+            // --- OTP Button Logic ---
+            sendOtpBtn.addEventListener('click', () => {
+                const mobileInput = document.getElementById('mobile');
+                if (mobileInput.value.trim().length < 10) {
+                     // Using a custom modal/alert in the future would be better than window.alert
+                    console.error('Please enter a valid 10-digit mobile number.');
+                    return;
+                }
+                
+                otpContainer.classList.remove('hidden');
+                otpMessage.classList.remove('hidden');
+
+                sendOtpBtn.disabled = true;
+                sendOtpBtn.textContent = 'Resend in 30s';
+                let countdown = 30;
+                const interval = setInterval(() => {
+                    countdown--;
+                    if (countdown > 0) {
+                        sendOtpBtn.textContent = `Resend in ${countdown}s`;
+                    } else {
+                        clearInterval(interval);
+                        sendOtpBtn.disabled = false;
+                        sendOtpBtn.textContent = 'Send OTP';
+                    }
+                }, 1000);
+            });
+            
+            researchForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                // Placeholder for R&D login logic
+                console.log('R&D Login Submitted');
+                researchView.classList.add('hidden');
+                researchDashboardView.classList.remove('hidden');
+            });
+            
+            // --- Modal Logic ---
+            closeDiseaseModalBtn.addEventListener('click', () => {
+                diseaseModal.classList.add('hidden');
+            });
+
+            expandMapBtn.addEventListener('click', () => {
+                mapModalContent.appendChild(mapWrapper);
+                mapModal.classList.remove('hidden');
+                // The timeout is crucial for the browser to render the new container size
+                setTimeout(() => map.invalidateSize(), 100); 
+            });
+
+            closeMapModalBtn.addEventListener('click', () => {
+                mapCardContent.appendChild(mapWrapper);
+                mapModal.classList.add('hidden');
+                setTimeout(() => map.invalidateSize(), 100);
+            });
+            
+            expandChartBtn.addEventListener('click', () => {
+                const canvas = document.getElementById('amuChart');
+                chartModalContent.appendChild(canvas);
+                chartModal.classList.remove('hidden');
+                // Resizing the chart after moving it
+                setTimeout(() => chart.resize(), 100);
+            });
+
+            closeChartModalBtn.addEventListener('click', () => {
+                const canvas = document.getElementById('amuChart');
+                chartCardContent.querySelector('.relative').appendChild(canvas);
+                chartModal.classList.add('hidden');
+                 setTimeout(() => chart.resize(), 100);
+            });
+
+            // --- MAP INITIALIZATION ---
+            function initPutturMap() {
+                mapWrapper = document.createElement('div');
+                mapWrapper.className = 'w-full h-full relative';
+                mapWrapper.innerHTML = `
+                    <div id="map" class="w-full h-full"></div>
+                    <div class="info-panel">
+                        <span class="close-btn">&times;</span>
+                        <h3>🦠 Overview: Puttur</h3>
+                        <p class="text-sm">Click a marker for details.</p>
+                    </div>
+                    <div class="legend">
+                        <h4>AMR Index</h4>
+                        <div class="legend-item"><div class="legend-color" style="background: #000080;"></div><span>Low</span></div>
+                        <div class="legend-item"><div class="legend-color" style="background: #00ff00;"></div><span>Med</span></div>
+                        <div class="legend-item"><div class="legend-color" style="background: #ffff00;"></div><span>High</span></div>
+                        <div class="legend-item"><div class="legend-color" style="background: #ffa500;"></div><span>V. High</span></div>
+                        <div class="legend-item"><div class="legend-color" style="background: #ff0000;"></div><span>Critical</span></div>
+                    </div>
+                `;
+                mapCardContent.appendChild(mapWrapper);
+
+                map = L.map(mapWrapper.querySelector('#map'), { zoomControl: false }).setView([12.7663, 75.2154], 13);
+                L.control.zoom({ position: 'topright' }).addTo(map);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap contributors'
+                }).addTo(map);
+
+                mapWrapper.querySelector('.close-btn').addEventListener('click', function() {
+                    mapWrapper.querySelector('.info-panel').style.display = 'none';
+                });
+
+                const amuData = { 'Puttur': { 'Cattle': [55, 58, 56, 60, 62], 'Poultry': [110, 115, 112, 118, 120], 'Pigs': [35, 38, 36, 40, 41] } };
+                const amrData = [
+                    {lat: 12.7663, lng: 75.2154, value: 85, location: "Puttur Town Center", increase: 14.5, region: "Puttur"},
+                    {lat: 12.7800, lng: 75.2200, value: 70, location: "Bolwar Dairy Co.", increase: 9.3, region: "Puttur"},
+                    {lat: 12.7500, lng: 75.2000, value: 92, location: "Darbes Circle Farm", increase: 18.1, region: "Puttur"},
+                    {lat: 12.7411, lng: 75.2350, value: 65, location: "Kabaka Poultry", increase: 8.5, region: "Puttur"},
+                    {lat: 12.7950, lng: 75.1980, value: 55, location: "Uppinangady Farms", increase: 6.2, region: "Puttur"},
+                    {lat: 12.7580, lng: 75.2500, value: 78, location: "Savanoor Poultry Farms", increase: 11.0, region: "Puttur"},
+                    {lat: 12.7200, lng: 75.1800, value: 96, location: "Nekkilady Agri", increase: 20.3, region: "Puttur"}
+                ];
+                
+                const getAvgAmu = (data) => (data.reduce((a, b) => a + b, 0) / data.length).toFixed(1);
+                const getResistanceRate = (value) => value > 90 ? "12-15%" : value > 75 ? "8-12%" : "2-8%";
+                const getColor = (value) => value > 90 ? '#ff0000' : value > 80 ? '#ffa500' : value > 60 ? '#ffff00' : value > 40 ? '#00ff00' : '#000080';
+
+                amrData.forEach(function(point) {
+                    const marker = L.circleMarker([point.lat, point.lng], { radius: 8, fillColor: getColor(point.value), color: '#ffffff', weight: 2, opacity: 0.9, fillOpacity: 0.7 });
+                    const regionAmu = amuData[point.region];
+                    const amuContent = `<div class="popup-stat">Cattle: <span class="stat-value">${getAvgAmu(regionAmu.Cattle)} mg/kg</span></div><div class="popup-stat">Poultry: <span class="stat-value">${getAvgAmu(regionAmu.Poultry)} mg/kg</span></div><div class="popup-stat">Pigs: <span class="stat-value">${getAvgAmu(regionAmu.Pigs)} mg/kg</span></div>`;
+                    const popupContent = `<div class="custom-popup"><div class="popup-title">${point.location}</div><div class="popup-section-title">Resistance Metrics</div><div class="popup-stat">AMR Index: <span class="stat-value">${point.value}/100</span></div><div class="popup-stat">Resistance Spread: <span class="stat-value">${getResistanceRate(point.value)}</span></div><div class="popup-section-title">Avg. Annual AMU</div>${amuContent}</div>`;
+                    marker.bindPopup(popupContent).addTo(map);
+                });
+
+                const heatPoints = amrData.map(p => [p.lat, p.lng, p.value / 100]);
+                
+                // FIX: Defer the execution of the heatlayer to prevent race condition
+                setTimeout(function() {
+                    L.heatLayer(heatPoints, { radius: 45, blur: 35, maxZoom: 18, max: 1.0, gradient: { 0.2: '#000080', 0.4: '#00ff00', 0.6: '#ffff00', 0.8: '#ffa500', 1.0: '#ff0000' } }).addTo(map);
+                }, 1);
+                
+                map.invalidateSize();
+            }
+
+            // --- CHART INITIALIZATION ---
+            function initPutturChart() {
+                const putturAmuData = { 'Cattle': [62, 64, 66, 68, 70, 72, 74, 71, 78, 80, 82, 85], 'Poultry': [125, 128, 130, 133, 135, 138, 142, 140, 145, 148, 152, 153], 'Pigs': [42, 44, 46, 48, 50, 52, 49, 56, 58, 60, 62, 65] };
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const ctx = document.getElementById('amuChart').getContext('2d');
+                
+                const datasets = [
+                    { label: 'Cattle', data: putturAmuData.Cattle, borderColor: '#4C51BF', backgroundColor: '#4C51BF', borderWidth: 2, fill: false, tension: 0.4 },
+                    { label: 'Poultry', data: putturAmuData.Poultry, borderColor: '#F59E0B', backgroundColor: '#F59E0B', borderWidth: 2, fill: false, tension: 0.4 },
+                    { label: 'Pigs', data: putturAmuData.Pigs, borderColor: '#10B981', backgroundColor: '#10B981', borderWidth: 2, fill: false, tension: 0.4 }
+                ];
+
+                chart = new Chart(ctx, {
+                    type: 'line', data: { labels: months, datasets: datasets },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: false, title: { display: true, text: 'AMU Usage (mg/kg)' } } },
+                        plugins: { legend: { position: 'top', align: 'end', labels: { usePointStyle: true, boxWidth: 8 } } },
+                        interaction: { mode: 'index', intersect: false }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

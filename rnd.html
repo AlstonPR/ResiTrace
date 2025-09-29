@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>R&D Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Leaflet map container styles */
+        #mapContainer {
+            height: 300px; /* Initial height for the map on the homepage */
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        .info-panel {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 400;
+            max-width: 200px;
+        }
+        .info-panel h3 {
+            margin: 0 0 5px 0;
+            color: #d63031;
+            font-size: 14px;
+        }
+        .info-panel p {
+            font-size: 11px;
+            margin: 3px 0;
+        }
+        .close-btn {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #aaa;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .close-btn:hover { color: #333; }
+        .legend {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 400;
+        }
+        .legend h4 {
+            margin: 0 0 8px 0;
+            font-size: 12px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 4px 0;
+            font-size: 10px;
+        }
+        .legend-color {
+            width: 18px;
+            height: 12px;
+            margin-right: 8px;
+            border-radius: 2px;
+        }
+        .custom-popup {
+            font-family: 'Inter', sans-serif;
+            width: 260px;
+        }
+        .popup-title {
+            font-weight: bold;
+            color: #d63031;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        .popup-section-title {
+            font-weight: bold;
+            color: #333;
+            margin-top: 12px;
+            margin-bottom: 5px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 3px;
+        }
+        .popup-stat {
+            margin: 4px 0;
+            font-size: 14px;
+        }
+        .stat-value {
+            font-weight: bold;
+            color: #2d3436;
+        }
+        /* Fullscreen Map Styles */
+        #mapWrapper.fullscreen-active {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 20;
+            border-radius: 1rem; /* Match parent container's corners */
+            overflow: hidden; /* Clip map to the rounded corners */
+        }
+        #mapWrapper.fullscreen-active #mapContainer {
+            height: 100%;
+            border-radius: 0;
+        }
+        #mapWrapper.fullscreen-active > .flex {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1001; 
+            padding: 1rem; 
+            box-sizing: border-box; 
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0.95), transparent);
+            pointer-events: none; 
+        }
+        #mapWrapper.fullscreen-active > .flex > * {
+            pointer-events: all;
+        }
+        .fullscreen-map .leaflet-control-container {
+            display: none;
+        }
+        
+        /* Chart Styles */
+        .chart-container {
+             position: relative;
+             height: 280px;
+        }
+        #region-filter {
+            padding: 0.4rem 0.6rem;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            background-color: #fff;
+            font-size: 0.875rem;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        #region-filter:focus {
+            outline: none;
+            border-color: #4C51BF;
+            box-shadow: 0 0 0 3px rgba(76, 81, 191, 0.25);
+        }
+
+        /* Accordion Card Styles */
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-out, padding 0.5s ease-out;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        .card.open .card-content {
+            max-height: 1000px; 
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+        }
+        .rotate-180 {
+            transform: rotate(180deg);
+        }
+        .transition-transform {
+            transition: transform 0.3s ease-in-out;
+        }
+        /* Custom scrollbar hiding */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none; /* For Chrome, Safari, and Opera */
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;  /* For IE and Edge */
+            scrollbar-width: none;  /* For Firefox */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+    <!-- Login Container -->
+    <div id="loginContainer" class="bg-white w-full max-w-[375px] h-[667px] mx-auto rounded-2xl shadow-lg p-6 flex flex-col justify-center">
+        <div class="flex items-center mb-8">
+            <button class="text-gray-600 hover:text-gray-800">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+            </button>
+            <h1 class="text-2xl font-bold text-gray-800 ml-4">R&D Login</h1>
+        </div>
+
+        <form id="loginForm">
+            <div class="mb-4">
+                <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                <input type="email" id="email" name="email" placeholder="Enter your institutional email" class="w-full px-4 py-3 bg-gray-100 border-gray-200 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+            </div>
+            <div class="mb-4">
+                <label for="password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                <input type="password" id="password" name="password" placeholder="Enter your password" class="w-full px-4 py-3 bg-gray-100 border-gray-200 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+            </div>
+            <div class="mb-6">
+                <label for="access-key" class="block text-sm font-medium text-gray-700 mb-2">Access Key</label>
+                <input type="text" id="access-key" name="access-key" placeholder="Enter your research access key" class="w-full px-4 py-3 bg-gray-100 border-gray-200 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+            </div>
+            <button type="submit" class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 transition duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50">
+                Login
+            </button>
+        </form>
+    </div>
+
+    <!-- Home Page Container -->
+    <div id="homePage" class="relative bg-gray-50 w-full max-w-[375px] h-[667px] mx-auto rounded-2xl shadow-lg flex-col justify-start hidden overflow-y-auto hide-scrollbar">
+        <!-- Header -->
+        <header class="bg-white shadow-sm p-4 flex justify-between items-center rounded-t-2xl sticky top-0 z-10">
+            <div class="flex items-center">
+                <img src="https://placehold.co/40x40/7c3aed/ffffff?text=ER" alt="Researcher Avatar" class="rounded-full">
+                <div class="ml-3">
+                    <h2 class="text-md font-bold text-gray-800">Dr. Evelyn Reed</h2>
+                </div>
+            </div>
+            <button class="text-gray-500 hover:text-gray-800">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.096 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            </button>
+        </header>
+        
+        <main class="p-4 relative z-0">
+             <!-- AMR Heatmap Section -->
+             <div id="mapWrapper" class="bg-white p-4 rounded-xl shadow transition-all duration-300">
+                 <div class="flex justify-between items-center mb-3">
+                     <h3 class="font-bold text-gray-800">AMR Hotspots - India</h3>
+                     <div>
+                         <button id="fullscreenBtn" class="text-purple-600 hover:text-purple-800">
+                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 1v4m0 0h-4m4 0l-5-5" /></svg>
+                         </button>
+                          <button id="closeFullscreenBtn" class="hidden text-purple-600 hover:text-purple-800">
+                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 4H4v6m16 4v6h-6m-4-2l-6-6m16-4l-6 6" /></svg>
+                         </button>
+                     </div>
+                 </div>
+                 <div id="mapContainer">
+                     <div id="map"></div>
+                 </div>
+             </div>
+
+            <!-- AMU Usage Dashboard -->
+            <div class="bg-white p-4 rounded-xl shadow mt-4">
+                <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
+                    <h3 id="chart-title" class="font-bold text-gray-800 text-base">AMU Usage Dashboard</h3>
+                    <div class="filter-container">
+                        <select id="region-filter" class="text-xs">
+                             <option value="New Delhi">New Delhi</option>
+                             <option value="Mumbai">Mumbai</option>
+                             <option value="Kolkata">Kolkata</option>
+                             <option value="Chennai">Chennai</option>
+                             <option value="Bengaluru">Bengaluru</option>
+                             <option value="Hyderabad">Hyderabad</option>
+                             <option value="Ahmedabad">Ahmedabad</option>
+                             <option value="Pune">Pune</option>
+                             <option value="Jaipur">Jaipur</option>
+                             <option value="Lucknow">Lucknow</option>
+                             <option value="Bhopal">Bhopal</option>
+                             <option value="Patna">Patna</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="amuChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Key Pathogen Resistance Section -->
+            <div class="bg-white p-4 rounded-xl shadow mt-4">
+                 <h3 class="font-bold text-gray-800 text-base mb-3">Key Pathogen Resistance</h3>
+                 <div id="data-container" class="space-y-4">
+                    <!-- Data cards will be injected here by JavaScript -->
+                 </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+
+    <script>
+        const loginForm = document.getElementById('loginForm');
+        const loginContainer = document.getElementById('loginContainer');
+        const homePage = document.getElementById('homePage');
+        let map;
+        let mapInitialized = false;
+        let chartInitialized = false;
+        let amrCardsInitialized = false;
+
+        loginForm.addEventListener('submit', function(event) {
+            event.preventDefault(); 
+
+            loginContainer.classList.add('hidden');
+            homePage.classList.remove('hidden');
+            homePage.classList.add('flex');
+            
+            if (!mapInitialized) {
+                initializeMap();
+                mapInitialized = true;
+            }
+            if (!chartInitialized) {
+                initializeChart();
+                chartInitialized = true;
+            }
+            if (!amrCardsInitialized) {
+                initializeAmrCards();
+                amrCardsInitialized = true;
+            }
+        });
+        
+        // --- MAP SCRIPT ---
+        function initializeMap() {
+            const mapElement = document.getElementById('map');
+            const mapContainer = document.getElementById('mapContainer');
+            mapContainer.innerHTML = '';
+            mapContainer.appendChild(mapElement);
+            
+            map = L.map('map', { zoomControl: false }).setView([20.5937, 78.9629], 5);
+            L.control.zoom({ position: 'topright' }).addTo(map);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            const amuData = { 'New Delhi': { 'Cattle': [70, 72, 68, 75, 73, 80, 82, 81, 85, 88, 84, 90], 'Poultry': [130, 135, 132, 140, 138, 145, 150, 143, 152, 155, 158, 160], 'Pigs': [50, 52, 48, 55, 53, 60, 62, 61, 65, 68, 64, 70] }, 'Mumbai': { 'Cattle': [65, 68, 70, 72, 75, 73, 78, 80, 77, 82, 80, 83], 'Poultry': [140, 142, 145, 148, 152, 150, 155, 158, 160, 162, 158, 165], 'Pigs': [45, 48, 50, 52, 55, 53, 58, 60, 57, 62, 59, 63] }, 'Kolkata': { 'Cattle': [60, 62, 65, 63, 68, 70, 67, 75, 73, 78, 80, 78], 'Poultry': [120, 125, 128, 130, 135, 132, 138, 140, 142, 145, 141, 150], 'Pigs': [40, 42, 45, 43, 48, 50, 48, 55, 53, 58, 60, 57] }, 'Chennai': { 'Cattle': [55, 57, 60, 62, 59, 61, 66, 68, 70, 72, 69, 74], 'Poultry': [110, 112, 115, 118, 122, 120, 125, 128, 130, 133, 131, 138], 'Pigs': [35, 37, 40, 42, 39, 41, 46, 48, 50, 52, 49, 54] }, 'Bengaluru': { 'Cattle': [75, 78, 80, 82, 85, 83, 88, 90, 87, 92, 90, 93], 'Poultry': [150, 152, 155, 158, 162, 160, 165, 168, 170, 172, 168, 175], 'Pigs': [55, 58, 60, 62, 65, 63, 68, 70, 67, 72, 69, 73] }, 'Hyderabad': { 'Cattle': [72, 74, 71, 75, 77, 76, 79, 81, 80, 83, 85, 84], 'Poultry': [145, 148, 146, 150, 153, 151, 155, 157, 156, 159, 162, 160], 'Pigs': [52, 54, 51, 55, 57, 56, 59, 61, 60, 63, 65, 64] }, 'Ahmedabad': { 'Cattle': [58, 60, 63, 61, 65, 68, 70, 72, 75, 73, 78, 81], 'Poultry': [115, 118, 120, 124, 122, 128, 132, 135, 138, 140, 137, 142], 'Pigs': [38, 40, 43, 41, 45, 48, 50, 53, 51, 56, 59, 61] }, 'Pune': { 'Cattle': [68, 70, 72, 75, 73, 77, 80, 78, 82, 85, 83, 86], 'Poultry': [135, 138, 140, 143, 141, 145, 148, 150, 153, 155, 152, 158], 'Pigs': [48, 50, 53, 51, 55, 58, 60, 58, 62, 65, 63, 66] }, 'Jaipur': { 'Cattle': [62, 64, 66, 68, 70, 72, 74, 71, 78, 80, 82, 85], 'Poultry': [125, 128, 130, 133, 135, 138, 142, 140, 145, 148, 152, 153], 'Pigs': [42, 44, 46, 48, 50, 52, 49, 56, 58, 60, 62, 65] }, 'Lucknow': { 'Cattle': [50, 52, 55, 53, 58, 60, 57, 65, 63, 68, 70, 68], 'Poultry': [100, 105, 108, 110, 115, 112, 118, 120, 122, 125, 121, 130], 'Pigs': [30, 32, 35, 33, 38, 40, 38, 45, 43, 48, 50, 47] }, 'Bhopal': { 'Cattle': [53, 55, 52, 56, 58, 57, 60, 62, 61, 64, 66, 65], 'Poultry': [105, 107, 104, 108, 110, 109, 112, 114, 113, 116, 118, 117], 'Pigs': [33, 35, 32, 36, 38, 37, 40, 42, 41, 44, 46, 45] }, 'Patna': { 'Cattle': [48, 50, 47, 51, 53, 52, 55, 57, 56, 59, 61, 60], 'Poultry': [98, 100, 97, 101, 103, 102, 105, 107, 106, 109, 111, 110], 'Pigs': [28, 30, 27, 31, 33, 32, 35, 37, 36, 39, 41, 40] }, 'Chandigarh': { 'Cattle': [78, 80, 77, 81, 83, 82, 85, 87, 86, 89, 91, 90], 'Poultry': [155, 157, 154, 158, 160, 159, 162, 164, 163, 166, 168, 167], 'Pigs': [58, 60, 57, 61, 63, 62, 65, 67, 66, 69, 71, 70] }, 'Guwahati': { 'Cattle': [45, 46, 44, 48, 47, 50, 51, 49, 52, 54, 53, 56], 'Poultry': [90, 92, 89, 93, 95, 94, 97, 99, 98, 101, 103, 102], 'Pigs': [60, 62, 60, 64, 63, 66, 67, 65, 68, 70, 69, 72] }, 'Thiruvananthapuram': { 'Cattle': [66, 67, 65, 69, 68, 71, 72, 70, 73, 75, 74, 77], 'Poultry': [128, 130, 127, 131, 133, 132, 135, 137, 136, 139, 141, 140], 'Pigs': [46, 47, 45, 49, 48, 51, 52, 50, 53, 55, 54, 57] } };
+            const amrData = [ {lat: 28.6139, lng: 77.2090, value: 96, location: "New Delhi", increase: 20.1, region: "New Delhi", commonPathogen: "E. coli", topAntibiotic: "Ciprofloxacin"}, {lat: 19.0760, lng: 72.8777, value: 92, location: "Mumbai", increase: 18.5, region: "Mumbai", commonPathogen: "K. pneumoniae", topAntibiotic: "Meropenem"}, {lat: 22.5726, lng: 88.3639, value: 85, location: "Kolkata", increase: 14.2, region: "Kolkata", commonPathogen: "A. baumannii", topAntibiotic: "Colistin"}, {lat: 13.0827, lng: 80.2707, value: 88, location: "Chennai", increase: 15.6, region: "Chennai", commonPathogen: "P. aeruginosa", topAntibiotic: "Piperacillin"}, {lat: 12.9716, lng: 77.5946, value: 98, location: "Bengaluru", increase: 22.3, region: "Bengaluru", commonPathogen: "E. coli", topAntibiotic: "Ceftriaxone"}, {lat: 17.3850, lng: 78.4867, value: 91, location: "Hyderabad", increase: 17.8, region: "Hyderabad", commonPathogen: "K. pneumoniae", topAntibiotic: "Imipenem"}, {lat: 23.0225, lng: 72.5714, value: 78, location: "Ahmedabad", increase: 11.5, region: "Ahmedabad", commonPathogen: "S. aureus", topAntibiotic: "Vancomycin"}, {lat: 18.5204, lng: 73.8567, value: 82, location: "Pune", increase: 13.1, region: "Pune", commonPathogen: "E. coli", topAntibiotic: "Ciprofloxacin"}, {lat: 26.9124, lng: 75.7873, value: 75, location: "Jaipur", increase: 10.9, region: "Jaipur", commonPathogen: "S. Typhi", topAntibiotic: "Azithromycin"}, {lat: 26.8467, lng: 80.9462, value: 65, location: "Lucknow", increase: 8.4, region: "Lucknow", commonPathogen: "E. coli", topAntibiotic: "Amoxicillin"}, {lat: 23.2599, lng: 77.4126, value: 58, location: "Bhopal", increase: 6.7, region: "Bhopal", commonPathogen: "S. pneumoniae", topAntibiotic: "Penicillin"}, {lat: 25.5941, lng: 85.1376, value: 52, location: "Patna", increase: 5.9, region: "Patna", commonPathogen: "V. cholerae", topAntibiotic: "Doxycycline"}, {lat: 30.7333, lng: 76.7794, value: 89, location: "Chandigarh", increase: 16.2, region: "Chandigarh", commonPathogen: "K. pneumoniae", topAntibiotic: "Meropenem"}, {lat: 26.1445, lng: 91.7362, value: 48, location: "Guwahati", increase: 4.8, region: "Guwahati", commonPathogen: "Shigella", topAntibiotic: "Ciprofloxacin"}, {lat: 8.5241, lng: 76.9366, value: 72, location: "Thiruvananthapuram", increase: 9.3, region: "Thiruvananthapuram", commonPathogen: "E. coli", topAntibiotic: "Nitrofurantoin"}, {lat: 21.1458, lng: 79.0882, value: 79, location: "Nagpur", increase: 12.0, region: "Pune", commonPathogen: "E. coli", topAntibiotic: "Ciprofloxacin"}, {lat: 24.5854, lng: 73.7125, value: 68, location: "Udaipur", increase: 8.8, region: "Jaipur", commonPathogen: "S. Typhi", topAntibiotic: "Azithromycin"}, {lat: 22.3072, lng: 73.1812, value: 71, location: "Vadodara", increase: 9.1, region: "Ahmedabad", commonPathogen: "S. aureus", topAntibiotic: "Vancomycin"}, {lat: 15.2993, lng: 74.1240, value: 78, location: "Goa", increase: 10.1, region: "Mumbai", commonPathogen: "K. pneumoniae", topAntibiotic: "Meropenem"}, {lat: 11.2588, lng: 75.7804, value: 81, location: "Kozhikode", increase: 11.9, region: "Thiruvananthapuram", commonPathogen: "E. coli", topAntibiotic: "Nitrofurantoin"}, ];
+            const getAvgAmu = (data) => (data.reduce((a, b) => a + b, 0) / data.length).toFixed(1);
+            function getTreatmentDuration(value) { return value > 90 ? "18-21 days" : value > 75 ? "14-18 days" : value > 60 ? "10-14 days" : value > 40 ? "7-10 days" : "5-7 days"; }
+            function getResistanceRate(value) { return value > 90 ? "12-15%" : value > 75 ? "8-12%" : value > 60 ? "5-8%" : value > 40 ? "2-5%" : "0-2%"; }
+            function getColor(value) { return value > 90 ? '#ff0000' : value > 80 ? '#ffa500' : value > 60 ? '#ffff00' : value > 40 ? '#00ff00' : '#000080'; }
+            const markerGroup = L.featureGroup();
+            amrData.forEach(function(point) {
+                var marker = L.circleMarker([point.lat, point.lng], { radius: 8, fillColor: getColor(point.value), color: '#ffffff', weight: 2, opacity: 0.8, fillOpacity: 0.6 });
+                let amuContent = '<div class="popup-stat">Avg. AMU data not available.</div>';
+                if (point.location && amuData[point.location]) {
+                    const regionAmu = amuData[point.location];
+                    amuContent = `<div class="popup-stat">Cattle: <span class="stat-value">${getAvgAmu(regionAmu.Cattle)} mg/kg</span></div><div class="popup-stat">Poultry: <span class="stat-value">${getAvgAmu(regionAmu.Poultry)} mg/kg</span></div><div class="popup-stat">Pigs: <span class="stat-value">${getAvgAmu(regionAmu.Pigs)} mg/kg</span></div>`;
+                }
+                var popupContent = `<div class="custom-popup"><div class="popup-title">${point.location}</div><div class="popup-section-title">Resistance Metrics</div><div class="popup-stat">AMR Index: <span class="stat-value">${point.value}/100</span></div><div class="popup-stat">Annual Increase: <span class="stat-value">${point.increase}%</span></div><div class="popup-stat">Resistance Spread Rate: <span class="stat-value">${getResistanceRate(point.value)}</span></div><div class="popup-stat">Est. Treatment Duration: <span class="stat-value">${getTreatmentDuration(point.value)}</span></div> <div class="popup-stat">Common Pathogen: <span class="stat-value">${point.commonPathogen || 'N/A'}</span></div><div class="popup-stat">Top Antibiotic Used: <span class="stat-value">${point.topAntibiotic || 'N/A'}</span></div> <div class="popup-section-title">Avg. Annual AMU (Regional)</div>${amuContent}</div>`;
+                marker.bindPopup(popupContent);
+                marker.addTo(markerGroup);
+            });
+            markerGroup.addTo(map);
+            const infoPanelHTML = `<div class="info-panel"><span class="close-btn">&times;</span><h3>🦠 AMR & AMU Overview</h3><p>Monitoring <strong>AMR</strong> and <strong>AMU</strong>.</p><p>Click a city for details.</p></div>`;
+            const legendHTML = `<div class="legend"><h4>AMR Intensity Level</h4><div class="legend-item"><div class="legend-color" style="background: #000080;"></div><span>Low (20-40)</span></div><div class="legend-item"><div class="legend-color" style="background: #00ff00;"></div><span>Moderate (40-60)</span></div><div class="legend-item"><div class="legend-color" style="background: #ffff00;"></div><span>High (60-80)</span></div><div class="legend-item"><div class="legend-color" style="background: #ffa500;"></div><span>Very High (80-90)</span></div><div class="legend-item"><div class="legend-color" style="background: #ff0000;"></div><span>Critical (90-100)</span></div></div>`;
+            mapContainer.insertAdjacentHTML('beforeend', infoPanelHTML);
+            mapContainer.insertAdjacentHTML('beforeend', legendHTML);
+            mapContainer.querySelector('.close-btn').addEventListener('click', function() {
+                mapContainer.querySelector('.info-panel').style.display = 'none';
+            });
+        }
+        const mapWrapper = document.getElementById('mapWrapper');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const closeFullscreenBtn = document.getElementById('closeFullscreenBtn');
+        const mapContainerForFullscreen = document.getElementById('mapContainer');
+        fullscreenBtn.addEventListener('click', () => {
+            mapWrapper.classList.add('fullscreen-active');
+            mapContainerForFullscreen.classList.add('fullscreen-map');
+            fullscreenBtn.classList.add('hidden');
+            closeFullscreenBtn.classList.remove('hidden');
+            setTimeout(() => map.invalidateSize(), 150);
+        });
+        closeFullscreenBtn.addEventListener('click', () => {
+            mapWrapper.classList.remove('fullscreen-active');
+            mapContainerForFullscreen.classList.remove('fullscreen-map');
+            fullscreenBtn.classList.remove('hidden');
+            closeFullscreenBtn.classList.add('hidden');
+            setTimeout(() => map.invalidateSize(), 150);
+        });
+
+        // --- CHART SCRIPT ---
+        function initializeChart() {
+             const chartAmuData = {
+                 'New Delhi': { 'Cattle': [70, 72, 68, 75, 73, 80, 82, 81, 85, 88, 84, 90], 'Poultry': [150, 155, 152, 160, 158, 165, 170, 163, 172, 175, 178, 180], 'Pigs': [50, 52, 48, 55, 53, 60, 62, 61, 65, 68, 64, 70] },
+                 'Mumbai': { 'Cattle': [60, 62, 65, 63, 68, 70, 67, 75, 73, 78, 80, 78], 'Poultry': [130, 135, 138, 140, 145, 142, 148, 150, 152, 155, 151, 160], 'Pigs': [40, 42, 45, 43, 48, 50, 48, 55, 53, 58, 60, 57] },
+                 'Kolkata': { 'Cattle': [55, 58, 60, 62, 65, 63, 68, 70, 67, 72, 70, 73], 'Poultry': [140, 142, 145, 148, 152, 150, 155, 158, 160, 162, 158, 165], 'Pigs': [45, 48, 50, 52, 55, 53, 58, 60, 57, 62, 59, 63] },
+                 'Chennai': { 'Cattle': [50, 52, 54, 56, 58, 60, 62, 59, 66, 68, 70, 73], 'Poultry': [160, 162, 165, 168, 172, 170, 175, 178, 180, 183, 181, 188], 'Pigs': [35, 37, 40, 42, 39, 41, 46, 48, 50, 52, 49, 54] },
+                 'Bengaluru': { 'Cattle': [68, 70, 72, 75, 73, 77, 80, 78, 82, 85, 83, 86], 'Poultry': [145, 148, 150, 153, 151, 155, 158, 160, 163, 165, 162, 168], 'Pigs': [40, 42, 45, 43, 47, 50, 48, 52, 55, 53, 57, 60] },
+                 'Hyderabad': { 'Cattle': [65, 67, 69, 71, 73, 75, 77, 74, 81, 83, 85, 88], 'Poultry': [155, 158, 160, 163, 165, 168, 172, 170, 175, 178, 182, 183], 'Pigs': [48, 50, 52, 54, 56, 58, 55, 62, 64, 66, 68, 71] },
+                 'Ahmedabad': { 'Cattle': [45, 48, 50, 53, 51, 55, 58, 56, 60, 63, 61, 64], 'Poultry': [110, 113, 115, 118, 116, 120, 123, 125, 128, 130, 127, 132], 'Pigs': [20, 22, 25, 23, 27, 30, 28, 32, 35, 33, 37, 40] },
+                 'Pune': { 'Cattle': [62, 64, 67, 65, 70, 73, 75, 77, 80, 78, 83, 86], 'Poultry': [135, 138, 140, 144, 142, 148, 152, 155, 158, 160, 157, 162], 'Pigs': [42, 44, 47, 45, 50, 53, 55, 58, 56, 61, 64, 66] },
+                 'Jaipur': { 'Cattle': [75, 78, 76, 80, 82, 85, 83, 88, 90, 87, 92, 95], 'Poultry': [120, 122, 125, 128, 126, 130, 133, 135, 138, 140, 137, 142], 'Pigs': [30, 32, 34, 36, 35, 38, 40, 39, 42, 44, 43, 46] },
+                 'Lucknow': { 'Cattle': [60, 63, 61, 65, 68, 66, 70, 72, 75, 73, 78, 80], 'Poultry': [150, 152, 155, 158, 156, 160, 162, 165, 168, 170, 167, 172], 'Pigs': [45, 47, 49, 51, 50, 53, 55, 54, 57, 60, 58, 62] },
+                 'Bhopal': { 'Cattle': [58, 60, 62, 64, 63, 66, 68, 70, 72, 71, 74, 76], 'Poultry': [130, 133, 131, 135, 138, 136, 140, 142, 145, 143, 148, 150], 'Pigs': [38, 40, 42, 41, 44, 46, 45, 48, 50, 49, 52, 54] },
+                 'Patna': { 'Cattle': [65, 68, 66, 70, 72, 75, 73, 78, 80, 77, 82, 85], 'Poultry': [115, 118, 116, 120, 122, 125, 123, 128, 130, 127, 132, 135], 'Pigs': [55, 58, 56, 60, 62, 65, 63, 68, 70, 67, 72, 75] },
+             };
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const ctx = document.getElementById('amuChart').getContext('2d');
+            const regionFilter = document.getElementById('region-filter');
+            const chartTitle = document.getElementById('chart-title');
+            
+            const datasets = [
+                { label: 'Cattle', data: [], borderColor: '#4C51BF', backgroundColor: '#4C51BF', borderWidth: 2.5, fill: false, tension: 0.4 },
+                { label: 'Poultry', data: [], borderColor: '#F59E0B', backgroundColor: '#F59E0B', borderWidth: 2.5, fill: false, tension: 0.4 },
+                { label: 'Pigs', data: [], borderColor: '#10B981', backgroundColor: '#10B981', borderWidth: 2.5, fill: false, tension: 0.4 }
+            ];
+
+            const amuChart = new Chart(ctx, {
+                type: 'line', data: { labels: months, datasets: datasets },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: false, title: { display: true, text: 'AMU Usage (mg/kg)', font: { size: 12, weight: '500' } } },
+                        x: { title: { display: false } }
+                    },
+                    plugins: {
+                        legend: { position: 'top', align: 'end', labels: { usePointStyle: true, boxWidth: 8, font: { size: 12 }, padding: 20 } },
+                        tooltip: { mode: 'index', intersect: false, padding: 10, titleFont: { weight: '600' }, bodyFont: { size: 12 } }
+                    },
+                    interaction: { mode: 'index', intersect: false }
+                }
+            });
+
+            function updateChart(region) {
+                const newData = chartAmuData[region];
+                if (!newData) return;
+                chartTitle.textContent = `AMU Usage – ${region}`;
+                amuChart.data.datasets.forEach((dataset) => {
+                    dataset.data = newData[dataset.label];
+                });
+                amuChart.update();
+            }
+
+            regionFilter.addEventListener('change', (e) => updateChart(e.target.value));
+            updateChart(regionFilter.value); // Initial chart render
+        }
+
+        // --- AMR Accordion Cards Script ---
+        function initializeAmrCards() {
+            const pathogenData = [
+                { bacterium: "Escherichia coli", livestock: "Poultry, Cattle, Pigs", diseases: "Colibacillosis, Mastitis, Septicemia", amr: [ { antibiotic: 'Cefotaxime', resistance: 52, source: 'Poultry' }, { antibiotic: 'Enrofloxacin', resistance: 43, source: 'Poultry' }, { antibiotic: 'Ampicillin', resistance: 58, source: 'Poultry' }, { antibiotic: 'Tetracycline', resistance: 50, source: 'Poultry' }, { antibiotic: 'Colistin', resistance: 28, source: 'Poultry' }, { antibiotic: 'Enrofloxacin', resistance: 30, source: 'Cattle' }, { antibiotic: 'Ciprofloxacin', resistance: 23, source: 'Cattle' }, { antibiotic: 'Ampicillin', resistance: 57, source: 'Pigs' }, { antibiotic: 'Tetracycline', resistance: 48, source: 'Pigs' } ] },
+                { bacterium: "Salmonella spp.", livestock: "Poultry, Cattle, Pigs", diseases: "Salmonellosis, Food Contamination", notes: "National surveillance by INFAAR lacks data for Salmonella spp.", amr: [ { antibiotic: 'Tetracycline', resistance: 65.4, source: 'Poultry' }, { antibiotic: 'Oxytetracycline', resistance: 100, source: 'Poultry' }, { antibiotic: 'Sulfonamide', resistance: 56.7, source: 'S. Kentucky' }, { antibiotic: 'Sulfonamide', resistance: 33.3, source: 'S. Typhimurium' } ] },
+                { bacterium: "Staphylococcus aureus", livestock: "Cattle, Pigs, Poultry", diseases: "Contagious Mastitis, Skin Infections", amr: [ { antibiotic: 'Penicillin', resistance: 85, range: '69-100', source: 'Cattle' }, { antibiotic: 'Penicillin-G', resistance: 82.6, source: 'Poultry' }, { antibiotic: 'Ampicillin', resistance: 99, range: '97.7-100', source: 'Poultry' }, { antibiotic: 'Ampicillin', resistance: 100, source: 'Pigs' }, { antibiotic: 'Oxacillin', resistance: 81, range: '65-97.7', source: 'Poultry' }, { antibiotic: 'Cefoxitin', resistance: 84, range: '67.5-100', source: 'Poultry' } ] },
+                { bacterium: "Pasteurella multocida", livestock: "Cattle, Buffalo, Goats, Poultry", diseases: "Haemorrhagic Septicaemia, Fowl Cholera", amr: [ { antibiotic: 'Sulfadiazine', resistance: 95, range: '90.3-100', source: 'Poultry' }, { antibiotic: 'Tetracycline', resistance: 32, source: 'Poultry' }, { antibiotic: 'Enrofloxacin', resistance: 6, source: 'Ruminants (94% sensitive)' }, { antibiotic: 'Tetracycline', resistance: 14, source: 'Ruminants (86% sensitive)' }, ] },
+                { bacterium: "Clostridium perfringens", livestock: "Poultry, Sheep, Goats, Pigs", diseases: "Necrotic Enteritis, Enterotoxemia", notes: "National surveillance by INFAAR lacks specific data for this pathogen.", amr: [ { antibiotic: 'Oxytetracycline', resistance: 100, source: 'Sheep' }, { antibiotic: 'Ceftriaxone-Tazobactam', resistance: 91, source: 'Sheep' }, ] }
+            ];
+
+            function getResistanceColor(percentage) {
+                if (percentage >= 75) return 'bg-red-500';
+                if (percentage >= 40) return 'bg-yellow-400';
+                return 'bg-green-500';
+            }
+            
+            const container = document.getElementById('data-container');
+            container.innerHTML = ''; // Clear previous content if any
+
+            pathogenData.forEach(item => {
+                const amrHtml = item.amr.map(antibiotic => {
+                    const color = getResistanceColor(antibiotic.resistance);
+                    const rangeText = antibiotic.range ? ` <span class="text-xs text-gray-500">(${antibiotic.range})</span>` : '';
+                    const resistanceColorClass = color.replace('bg-', 'text-').replace('400', '500');
+                    return `
+                        <div class="mb-3">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-sm font-medium text-gray-700">${antibiotic.antibiotic}<span class="text-xs text-gray-500 font-normal ml-1">(${antibiotic.source})</span>${rangeText}</span>
+                                <span class="text-sm font-bold ${resistanceColorClass}">${antibiotic.resistance}%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="${color} h-2 rounded-full" style="width: ${antibiotic.resistance}%"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                const notesHtml = item.notes ? `
+                    <div class="p-3 mb-4 text-sm text-yellow-800 rounded-lg bg-yellow-50 border border-yellow-200" role="alert">
+                        <span class="font-medium">Note:</span> ${item.notes}
+                    </div>
+                ` : '';
+                
+                const card = document.createElement('div');
+                card.className = 'card bg-white rounded-xl shadow-sm overflow-hidden mb-2 transition-all duration-300 ease-in-out border border-gray-200/80';
+                card.innerHTML = `
+                    <div class="card-header p-3 flex justify-between items-center cursor-pointer hover:bg-gray-100">
+                        <div>
+                            <h2 class="text-md font-bold text-gray-800">${item.bacterium}</h2>
+                            <p class="text-xs text-gray-600">${item.livestock}</p>
+                        </div>
+                        <svg class="w-6 h-6 text-gray-500 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                    <div class="card-content px-4">
+                        <div class="border-t border-gray-200 pt-4">
+                            <div class="mb-4">
+                                <h3 class="text-sm font-semibold text-gray-800 mb-1">Associated Diseases</h3>
+                                <p class="text-xs text-gray-600">${item.diseases}</p>
+                            </div>
+                            <h3 class="text-sm font-semibold text-gray-800 mb-3">Resistance Profile</h3>
+                            ${notesHtml}
+                            <div class="space-y-3">${amrHtml}</div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+            
+            document.querySelectorAll('.card-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const clickedCard = header.parentElement;
+                    const isAlreadyOpen = clickedCard.classList.contains('open');
+
+                    document.querySelectorAll('.card').forEach(card => {
+                        card.classList.remove('open');
+                        card.querySelector('.card-header svg').classList.remove('rotate-180');
+                    });
+
+                    if (!isAlreadyOpen) {
+                        clickedCard.classList.add('open');
+                        clickedCard.querySelector('.card-header svg').classList.add('rotate-180');
+                    }
+                });
+            });
+        }
+    </script>
+</body>
+</html>

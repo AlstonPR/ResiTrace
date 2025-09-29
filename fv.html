@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vet Portal</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+        :root {
+            --primary-color: #27ae60;
+            --secondary-color: #2c3e50;
+            --background-color: #f4f7f6;
+            --card-bg-color: #ffffff;
+            --text-color: #333;
+            --danger-color: #e74c3c;
+            --success-color: #2ecc71;
+            --pending-color: #f39c12;
+            --completed-color: #bdc3c7;
+            --light-gray: #ecf0f1;
+            --border-radius: 12px;
+            --box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            --scan-primary-btn: #3b82f6; /* Blue */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* --- Page Containers --- */
+        #dashboardPage, #newFarmerPage, #transactionHistoryPage {
+            width: 100%;
+            max-width: 400px;
+            background: var(--background-color);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            margin: 0 auto;
+        }
+
+        /* Input field styling */
+        .modal-form input, .modal-form select, .modal-form textarea {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: 'Poppins', sans-serif;
+            background-color: #fff;
+        }
+        .modal-form textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        /* --- DASHBOARD & NEW FARMER PAGE STYLES --- */
+        header {
+            background-color: var(--card-bg-color);
+            color: var(--primary-color);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-top-left-radius: var(--border-radius);
+            border-top-right-radius: var(--border-radius);
+            border-bottom: 1px solid var(--light-gray);
+        }
+        header h1 { 
+            font-size: 1.4rem;
+            color: var(--secondary-color);
+        }
+
+        .header-button {
+            background: none;
+            border: none;
+            color: var(--secondary-color);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .scan-btn {
+            background-color: transparent;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 0.9rem;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: background-color 0.2s ease;
+        }
+        .scan-btn:hover {
+            background-color: rgba(39, 174, 96, 0.1);
+        }
+        .scan-btn i {
+            margin-right: 6px;
+        }
+
+        main { padding: 15px; }
+
+        .dashboard-card, .form-card {
+            background: var(--card-bg-color);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: var(--box-shadow);
+        }
+        .dashboard-card h3, .form-card h3 {
+            margin-bottom: 15px;
+            color: var(--secondary-color);
+            border-bottom: 2px solid var(--light-gray);
+            padding-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        .dashboard-card h3 i, .form-card h3 i {
+            margin-right: 10px;
+            color: var(--primary-color);
+        }
+        
+        /* --- Components --- */
+        .quick-stats { display: flex; justify-content: space-around; text-align: center; }
+        .stat-item i { font-size: 1.5rem; color: var(--primary-color); margin-bottom: 5px; }
+        .stat-item span { font-size: 0.8rem; color: #666; display: block; }
+        .stat-item p { font-size: 1.8rem; font-weight: 700; color: var(--secondary-color); }
+        
+        .special-card#volunteer { 
+            background-color: #e6f7ee;
+            border: 1px solid #a7d7c5;
+        }
+        .special-card#volunteer h4 {
+            color: #1e6b48;
+        }
+        .special-card#volunteer p {
+            color: #2a9d8f;
+        }
+
+        .action-item { padding: 15px 0; border-bottom: 1px solid var(--light-gray); }
+        .action-item:last-child { border-bottom: none; }
+        .action-item p { margin-bottom: 10px; }
+        .action-buttons { display: flex; gap: 10px; }
+        .btn-approve, .btn-decline, .btn-secondary, .btn-primary { padding: 8px 12px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 0.9rem; }
+        .btn-approve { background-color: var(--success-color); color: white; }
+        .btn-decline { background-color: var(--danger-color); color: white; }
+        .btn-secondary { background-color: var(--light-gray); color: var(--secondary-color); border: 1px solid #ccc; }
+        .btn-primary { background-color: var(--primary-color); color: white; }
+        .full-width { width: 100%; }
+        .notification { background-color: #fffbe6; padding: 10px; border-radius: 8px; border-left: 4px solid #f1c40f; }
+
+        /* --- REDESIGNED APPOINTMENTS SECTION --- */
+        .appointments-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .appointments-header .appointments-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--secondary-color);
+            margin: 0;
+            padding: 0;
+            border: none;
+        }
+        .appointments-header .appointments-subtitle {
+            font-size: 0.9rem;
+            color: #777;
+        }
+        #newVisitBtn {
+            font-size: 0.9rem;
+            padding: 10px 15px;
+        }
+        #newVisitBtn i { margin-right: 8px; }
+
+        .appointment-card {
+            display: flex;
+            align-items: center;
+            background-color: #fff;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin-bottom: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+            border: 1px solid var(--light-gray);
+        }
+        .appointment-time-status {
+            margin-right: 15px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 75px;
+        }
+        .appointment-time {
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--secondary-color);
+        }
+        .status-badge {
+            display: inline-block;
+            font-size: 0.75rem;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            margin-top: 5px;
+            color: white;
+            text-transform: capitalize;
+            cursor: pointer;
+        }
+        .status-confirmed { background-color: var(--success-color); }
+        .status-pending { background-color: var(--pending-color); }
+        .status-completed { background-color: var(--completed-color); color: var(--secondary-color);}
+
+        .appointment-details {
+            flex-grow: 1;
+            min-width: 0; 
+        }
+        .appointment-details h4 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0 0 4px 0;
+            white-space: nowrap; /* Keep name on one line */
+        }
+        .appointment-details p {
+            font-size: 0.9rem;
+            color: #777;
+            font-weight: 400;
+            margin: 0;
+        }
+        .appointment-details .appointment-location {
+            margin-top: 4px;
+        }
+         .appointment-details .appointment-location i {
+            margin-right: 5px;
+        }
+
+        .appointment-actions {
+            display: flex;
+            gap: 5px;
+            flex-shrink: 0;
+        }
+        .icon-btn {
+            background-color: var(--light-gray);
+            border: 1px solid #ddd;
+            color: var(--secondary-color);
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        /* --- INLINE FARMER SEARCH STYLES --- */
+        .farmer-search-input-wrapper { position: relative; margin-bottom: 15px; }
+        .farmer-search-input-wrapper i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #aaa; }
+        #farmerSearchInput { width: 100%; padding: 12px 12px 12px 40px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; }
+        .farmer-list { max-height: 220px; overflow-y: auto; }
+        .farmer-list-item { padding: 15px; border: 1px solid var(--light-gray); border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: background-color: 0.2s; }
+        .farmer-list-item:hover { background-color: #f9f9f9; }
+        .farmer-list-item h4 { margin-bottom: 5px; }
+        .farmer-list-item p { font-size: 0.9rem; color: #777; }
+        .farmer-list-item p i { margin-right: 5px; }
+        #farmerDetailsContainer {
+            margin-top: 15px;
+            padding: 15px;
+            border: 1px solid var(--light-gray);
+            border-radius: 8px;
+        }
+        #farmerDetailsContainer h4 { color: var(--secondary-color); font-size: 1.2rem; margin-bottom: 5px; }
+        #farmerDetailsContainer p { font-size: 1rem; color: #555; margin-bottom: 15px; }
+        .record-section h5 { font-size: 1.1rem; color: var(--secondary-color); margin-top: 15px; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid #eee;}
+        .record-card { background-color: #fdfdfd; padding: 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #eee; }
+        .record-card p { margin: 0 0 5px 0; font-size: 0.95rem; }
+        .record-card p strong { color: #555; }
+        .record-card .record-meta { font-size: 0.8rem; color: #888; }
+        .no-records { text-align: center; color: #888; padding: 15px; }
+
+        /* --- RECENT CASES STYLES --- */
+        .case-card {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid var(--light-gray);
+            border-radius: var(--border-radius);
+            margin-bottom: 10px;
+            background-color: #fff;
+        }
+        .case-icon {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            background-color: var(--light-gray);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+        .case-details {
+            flex-grow: 1;
+        }
+        .case-details h4 {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        .case-details p {
+            font-size: 0.8rem;
+            color: #777;
+        }
+
+        /* --- MODAL STYLES --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 25px; border-radius: var(--border-radius); text-align: left; width: 90%; max-width: 420px; box-shadow: 0 5px 25px rgba(0,0,0,0.2); animation: fadeIn 0.3s ease-out; position: relative; max-height: 90vh; overflow-y: auto;}
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; text-align: left; }
+        .modal-header h2 { color: var(--secondary-color); font-size: 1.3rem; }
+        .close-button { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #888; }
+
+        /* --- Custom Notification & Loader --- */
+        .custom-notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 12px 25px;
+            border-radius: 8px;
+            z-index: 2000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            opacity: 0;
+            animation: fadeInOut 3.5s ease-in-out forwards;
+            font-weight: 600;
+        }
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; top: 0px; }
+            10%, 90% { opacity: 1; top: 20px; }
+        }
+        .custom-notification.success { background-color: var(--success-color); }
+        .custom-notification.error { background-color: var(--danger-color); }
+        
+        #loader-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            flex-direction: column;
+            color: white;
+            font-size: 1.1rem;
+            text-align: center;
+        }
+        .spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+         /* --- PAYMENT TRACKER STYLES --- */
+        .transaction-list {
+            margin-bottom: 20px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .transaction-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--light-gray);
+        }
+        .transaction-item:last-child {
+            border-bottom: none;
+        }
+        .transaction-farmer {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .transaction-date {
+            font-size: 0.8rem;
+            color: #777;
+        }
+        .transaction-amount {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--success-color);
+        }
+        .total-earnings {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background-color: var(--light-gray);
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .total-label {
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--secondary-color);
+        }
+        .total-amount {
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--primary-color);
+        }
+
+
+        /* --- PRESCRIPTION MODAL STYLES --- */
+        .form-section-header {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--secondary-color);
+            margin-top: 20px;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid var(--light-gray);
+        }
+        .btn-upload {
+            background-color: var(--light-gray);
+            color: var(--secondary-color);
+            border: 1px dashed #ccc;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            width: 100%;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .btn-upload i {
+            margin-right: 8px;
+        }
+        .modal-form label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #555;
+        }
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .modal-footer .btn-secondary, .modal-footer .btn-primary {
+            flex: 1;
+        }
+        
+        /* --- SCAN MODAL STYLES --- */
+        #scanPrescriptionModal .modal-content {
+            text-align: center;
+        }
+        #scanPrescriptionModal h2 {
+            color: var(--secondary-color);
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+        }
+        #scanPrescriptionModal p {
+            color: #666;
+            margin-bottom: 25px;
+        }
+        .scan-option-btn {
+            width: 100%;
+            padding: 15px;
+            border-radius: 8px;
+            border: none;
+            margin-bottom: 15px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.2s;
+        }
+        .scan-option-btn i {
+            margin-right: 10px;
+        }
+        .scan-option-btn.primary {
+            background-color: var(--scan-primary-btn);
+            color: white;
+        }
+        .scan-option-btn.secondary {
+            background-color: var(--light-gray);
+            color: var(--secondary-color);
+            border: 1px solid #ccc;
+        }
+        .scan-option-btn:hover {
+            opacity: 0.9;
+        }
+        .scan-cancel-btn {
+            background: none;
+            border: none;
+            color: #777;
+            cursor: pointer;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+
+        /* --- CAMERA MODAL --- */
+        #cameraModal .modal-content {
+            padding: 10px;
+            max-width: 100%;
+            width: 100%;
+            height: 100%;
+            background: #000;
+        }
+        #videoFeed {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
+        .camera-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+
+    </style>
+</head>
+<body>
+    <div id="loader-overlay">
+        <div class="spinner"></div>
+        <p id="loader-text">Loading...</p>
+    </div>
+
+    <input type="file" id="fileUploadInput" accept="image/*" style="display: none;">
+    <canvas id="photoCanvas" style="display: none;"></canvas>
+
+    <!-- VET DASHBOARD PAGE -->
+    <div id="dashboardPage">
+        <header>
+            <h1>Vet Dashboard</h1>
+            <div style="display: flex; align-items: center; gap: 16px;">
+                 <button id="scanBtn" class="scan-btn"><i class="fas fa-qrcode"></i> Scan</button>
+                 <!-- 
+                    DEVELOPER NOTE:
+                    To make this logout button functional, you can add an onclick event.
+                    For example, to redirect to a login page:
+                    onclick="window.location.href='login.html'" 
+                 -->
+                 <button id="logoutBtn" title="Logout" class="header-button" onclick="window.location.href='farmvet.html'">
+                    <i class="fas fa-sign-out-alt"></i>
+                 </button>
+            </div>
+        </header>
+        <main>
+            <div class="dashboard-card">
+                <div class="quick-stats">
+                    <div class="stat-item"><i class="fas fa-calendar-day"></i><span>Today's Visits</span><p id="visitsCount">0</p></div>
+                    <div class="stat-item"><i class="fas fa-check-circle"></i><span>Completed</span><p id="completedCount">0</p></div>
+                    <div class="stat-item"><i class="fas fa-hourglass-half"></i><span>Pending</span><p id="pendingCount">0</p></div>
+                </div>
+                <div style="margin-top: 20px;">
+                    <button id="addPrescriptionBtn" class="btn-primary full-width"><i class="fas fa-file-prescription"></i> Add Prescription</button>
+                </div>
+            </div>
+            <div id="serviceTypeCard" class="dashboard-card"></div>
+            <div class="dashboard-card" id="pendingActionsCard">
+                <h3><i class="fas fa-exclamation-triangle"></i> Pending Actions</h3>
+                <div class="action-item" data-farmer="Ram Kumar" data-animal="Cow" data-location="Sundarpur" data-phone="+91 98765 43210">
+                    <p><strong>Appointment Request:</strong> Ram Kumar, Cow (ID: 734)</p>
+                    <div class="action-buttons">
+                        <button class="btn-approve">Approve</button>
+                        <button class="btn-decline">Decline</button>
+                    </div>
+                </div>
+                <div class="action-item notification"><p><strong>Missed Treatment:</strong> Reminder to upload prescription for Goat Batch (ID: G-45).</p></div>
+            </div>
+            <div class="dashboard-card">
+                <div class="appointments-header">
+                    <div>
+                        <h3 class="appointments-title">Today's Appointments</h3>
+                        <p class="appointments-subtitle">Scheduled farm visits and consultations</p>
+                    </div>
+                    <button id="newVisitBtn" class="btn-primary"><i class="fas fa-calendar-plus"></i> New Visit</button>
+                </div>
+                <div id="appointmentsList">
+                     
+                </div>
+            </div>
+            <div class="dashboard-card" id="farmerPortal">
+                <h3><i class="fas fa-paw"></i> Animal Health Records</h3>
+                <div class="farmer-search-input-wrapper">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="farmerSearchInput" placeholder="Search farmers by name or location...">
+                </div>
+                <div class="farmer-list">
+                     <div class="farmer-list-item" data-name="Rajesh Kumar" data-location="Bangalore Rural, Karnataka">
+                        <h4>Rajesh Kumar</h4>
+                        <p><i class="fas fa-map-marker-alt"></i> Bangalore Rural, Karnataka</p>
+                    </div>
+                    <div class="farmer-list-item" data-name="Priya Sharma" data-location="Ludhiana, Punjab">
+                        <h4>Priya Sharma</h4>
+                        <p><i class="fas fa-map-marker-alt"></i> Ludhiana, Punjab</p>
+                    </div>
+                    <div class="farmer-list-item" data-name="Mohammed Ali" data-location="Meerut, Uttar Pradesh">
+                        <h4>Mohammed Ali</h4>
+                        <p><i class="fas fa-map-marker-alt"></i> Meerut, Uttar Pradesh</p>
+                    </div>
+                    <div class="farmer-list-item" data-name="Ram Kumar" data-location="Sundarpur">
+                        <h4>Ram Kumar</h4>
+                        <p><i class="fas fa-map-marker-alt"></i> Sundarpur</p>
+                    </div>
+                     <div class="farmer-list-item" data-name="Sita Devi Krishnamurthy" data-location="Ramgarh">
+                        <h4>Sita Devi</h4>
+                        <p><i class="fas fa-map-marker-alt"></i> Ramgarh</p>
+                    </div>
+                     <div class="farmer-list-item" data-name="Mohan Singh" data-location="Krishnapet">
+                        <h4>Mohan Singh</h4>
+                        <p><i class="fas fa-map-marker-alt"></i> Krishnapet</p>
+                    </div>
+                </div>
+                <div id="farmerDetailsContainer" style="display: none;"></div>
+                <button id="registerNewFarmerBtn" class="btn-primary full-width" style="margin-top: 15px;">+ Register New Farmer</button>
+            </div>
+            <div class="dashboard-card" id="recentCasesCard">
+                <h3><i class="fas fa-file-medical"></i> Recent Cases</h3>
+                <div id="recentCasesList">
+                    <p style="text-align: center; color: #888;">No recent cases to show.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- NEW FARMER REGISTRATION PAGE -->
+    <div id="newFarmerPage" style="display: none;">
+        <header>
+            <button id="backToDashboardBtn" class="header-button"><i class="fas fa-arrow-left"></i></button>
+            <h1>New Farmer</h1>
+            <div style="width: 24px;"></div>
+        </header>
+        <main>
+            <div class="form-card">
+                <h3><i class="fas fa-user-plus"></i> Farmer Details</h3>
+                <form id="newFarmerForm" class="modal-form">
+                    <input type="text" id="newFarmerName" placeholder="Full Name" required>
+                    <input type="text" id="newFarmerLocation" placeholder="Location (e.g., Bangalore Rural, Karnataka)" required>
+                    <input type="tel" placeholder="Phone Number" required>
+                    <button type="submit" class="btn-primary full-width">Save Farmer</button>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODALS -->
+    <div id="addAppointmentModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header"><h2>New Visit</h2><button class="close-button">&times;</button></div>
+            <form id="addAppointmentForm" class="modal-form">
+                <input type="text" id="newAppointmentFarmerName" placeholder="Farmer Name or ID" required>
+                <input type="date" id="newAppointmentDate" required>
+                <input type="time" id="newAppointmentTime" required>
+                <input type="text" id="newAppointmentLocation" placeholder="Location" required>
+                 <select id="newAppointmentAnimal" required>
+                    <option value="" disabled selected>Select Animal Type</option>
+                    <option value="Cow">Cow</option>
+                    <option value="Buffalo">Buffalo</option>
+                    <option value="Goat">Goat</option>
+                    <option value="Dog">Dog</option>
+                    <option value="Chicken">Chicken</option>
+                    <option value="Other">Other</option>
+                </select>
+                <input type="tel" id="newAppointmentPhone" placeholder="Phone Number" required>
+                <button type="submit" class="btn-primary full-width">Save Visit</button>
+            </form>
+        </div>
+    </div>
+    
+    <div id="paymentModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header"><h2>Log Payment</h2><button class="close-button">&times;</button></div>
+            <form id="paymentForm" class="modal-form">
+                <input type="number" id="paymentAmount" placeholder="Enter Amount (₹)" required min="0" step="any">
+                <button type="submit" class="btn-primary full-width">Save Payment</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="addPrescriptionModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Animal Treatment Record</h2>
+                <button class="close-button">&times;</button>
+            </div>
+            <p style="font-size: 0.9rem; color: #777; margin-top: -15px; margin-bottom: 20px;">Record antimicrobial treatment details for compliance tracking.</p>
+            <form id="prescriptionForm" class="modal-form">
+                <label for="farmerName">Farmer Name</label>
+                <input type="text" id="farmerName" placeholder="e.g., Rajesh Kumar" required>
+
+                <label for="animalName">Animal Name</label>
+                <input type="text" id="animalName" placeholder="e.g., Bessie" required>
+
+                <label for="animalId">Animal ID</label>
+                <input type="text" id="animalId" placeholder="e.g., COW-001" required>
+
+                <label for="species">Species</label>
+                <select id="species" required>
+                    <option value="" disabled selected>Select species</option>
+                    <option value="Cow">Cow</option>
+                    <option value="Buffalo">Buffalo</option>
+                    <option value="Goat">Goat</option>
+                    <option value="Sheep">Sheep</option>
+                    <option value="Poultry">Poultry</option>
+                </select>
+
+                <label for="age">Age (months)</label>
+                <input type="number" id="age" placeholder="e.g., 24" required>
+
+                <h4 class="form-section-header">Treatment Details</h4>
+                <button type="button" class="btn-upload"><i class="fas fa-qrcode"></i> Scan / Upload Prescription</button>
+
+                <label for="drugName">Drug Name</label>
+                <select id="drugName" required>
+                    <option value="" disabled selected>Select antimicrobial</option>
+                    <option value="Penicillin">Penicillin</option>
+                    <option value="Oxytetracycline">Oxytetracycline</option>
+                    <option value="Amoxicillin">Amoxicillin</option>
+                </select>
+
+                <label for="treatmentDate">Treatment Date</label>
+                <input type="date" id="treatmentDate" required>
+                
+                <label for="dose">Dose</label>
+                <input type="text" id="dose" placeholder="e.g., 10mg/kg" required>
+                
+                <label for="frequency">Frequency</label>
+                <input type="text" id="frequency" placeholder="e.g., Once daily" required>
+                
+                <label for="route">Route</label>
+                <select id="route" required>
+                    <option value="" disabled selected>Select route</option>
+                    <option value="Intramuscular">Intramuscular (IM)</option>
+                    <option value="Subcutaneous">Subcutaneous (SC)</option>
+                    <option value="Intravenous">Intravenous (IV)</option>
+                    <option value="Oral">Oral</option>
+                </select>
+                
+                <label for="reason">Reason for Treatment</label>
+                <textarea id="reason" placeholder="Describe the condition being treated" required></textarea>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary close-button">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="scanPrescriptionModal" class="modal-overlay">
+        <div class="modal-content">
+             <h2>Scan Prescription</h2>
+             <p>Choose an option to add the prescription image.</p>
+             <button id="openCameraBtn" class="scan-option-btn primary"><i class="fas fa-camera"></i> Open Camera</button>
+             <button id="uploadFileBtn" class="scan-option-btn secondary"><i class="fas fa-upload"></i> Upload from File</button>
+             <button class="scan-cancel-btn close-button">Cancel</button>
+        </div>
+    </div>
+
+    <div id="cameraModal" class="modal-overlay">
+        <div class="modal-content">
+            <video id="videoFeed" playsinline autoplay></video>
+            <div class="camera-controls">
+                <button id="captureBtn" class="btn-primary"><i class="fas fa-camera"></i> Capture</button>
+                <button id="closeCameraBtn" class="btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // This function is now in the global scope
+        function showNotification(message, type = '') {
+            const existingNotif = document.querySelector('.custom-notification');
+            if (existingNotif) {
+                existingNotif.remove();
+            }
+            const notification = document.createElement('div');
+            notification.className = `custom-notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            const animationDuration = 3500;
+            notification.style.animation = `fadeInOut ${animationDuration / 1000}s ease-in-out forwards`;
+
+            setTimeout(() => {
+                notification.remove();
+            }, animationDuration);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const dashboardPage = document.getElementById('dashboardPage');
+            const newFarmerPage = document.getElementById('newFarmerPage');
+            const scanBtn = document.getElementById('scanBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const registerNewFarmerBtn = document.getElementById('registerNewFarmerBtn');
+            const newVisitBtn = document.getElementById('newVisitBtn');
+            const backToDashboardBtn = document.getElementById('backToDashboardBtn');
+            const addAppointmentForm = document.getElementById('addAppointmentForm');
+            const newFarmerForm = document.getElementById('newFarmerForm');
+            const addAppointmentModal = document.getElementById('addAppointmentModal');
+            const paymentModal = document.getElementById('paymentModal');
+            const paymentForm = document.getElementById('paymentForm');
+            const addPrescriptionModal = document.getElementById('addPrescriptionModal');
+            const prescriptionForm = document.getElementById('prescriptionForm');
+            const scanPrescriptionModal = document.getElementById('scanPrescriptionModal');
+            const serviceTypeCard = document.getElementById('serviceTypeCard');
+            const farmerSearchInput = document.getElementById('farmerSearchInput');
+            const farmerPortal = document.getElementById('farmerPortal');
+            const farmerList = farmerPortal.querySelector('.farmer-list');
+            const farmerDetailsContainer = document.getElementById('farmerDetailsContainer');
+            let allFarmerItems = farmerList.querySelectorAll('.farmer-list-item');
+            const appointmentsList = document.getElementById('appointmentsList');
+            const pendingActionsCard = document.getElementById('pendingActionsCard');
+            const recentCasesList = document.getElementById('recentCasesList');
+            
+            const visitsCountEl = document.getElementById('visitsCount');
+            const completedCountEl = document.getElementById('completedCount');
+            const pendingCountEl = document.getElementById('pendingCount');
+
+            // OCR, Camera, and file upload elements
+            const loaderOverlay = document.getElementById('loader-overlay');
+            const loaderText = document.getElementById('loader-text');
+            const cameraModal = document.getElementById('cameraModal');
+            const videoFeed = document.getElementById('videoFeed');
+            const captureBtn = document.getElementById('captureBtn');
+            const closeCameraBtn = document.getElementById('closeCameraBtn');
+            const photoCanvas = document.getElementById('photoCanvas');
+            const fileUploadInput = document.getElementById('fileUploadInput');
+
+            // --- Data Stores ---
+            let allAppointments = [];
+            let allCases = [];
+            let allPrescriptions = [];
+            let allTransactions = [];
+
+            // --- Event Listeners ---
+            logoutBtn.addEventListener('click', () => {
+                showNotification('Logging out...', ''); // Using default color
+                setTimeout(() => {
+                    // In a real app, this would redirect to a login page.
+                    // For this prototype, we'll simply reload the page.
+                    window.location.reload();
+                }, 1500);
+            });
+
+            backToDashboardBtn.addEventListener('click', () => {
+                newFarmerPage.style.display = 'none';
+                dashboardPage.style.display = 'block';
+            });
+            
+            registerNewFarmerBtn.addEventListener('click', () => {
+                dashboardPage.style.display = 'none';
+                newFarmerPage.style.display = 'block';
+            });
+
+            newVisitBtn.addEventListener('click', () => addAppointmentModal.style.display = 'flex');
+            
+            document.querySelectorAll('.modal-overlay .close-button').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.target.closest('.modal-overlay').style.display = 'none';
+                });
+            });
+
+            addAppointmentForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const newAppointment = {
+                    id: `apt_${Date.now()}`,
+                    name: document.getElementById('newAppointmentFarmerName').value,
+                    date: document.getElementById('newAppointmentDate').value,
+                    time: document.getElementById('newAppointmentTime').value,
+                    location: document.getElementById('newAppointmentLocation').value,
+                    animal: document.getElementById('newAppointmentAnimal').value,
+                    phone: document.getElementById('newAppointmentPhone').value,
+                    status: 'pending'
+                };
+
+                allAppointments.push(newAppointment);
+                renderAppointments();
+                updateQuickStats();
+
+                addAppointmentModal.style.display = 'none';
+                addAppointmentForm.reset();
+            });
+
+            newFarmerForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const newFarmerName = document.getElementById('newFarmerName').value;
+                const newFarmerLocation = document.getElementById('newFarmerLocation').value;
+                addFarmerToSearchList(newFarmerName, newFarmerLocation);
+                showNotification('New farmer profile saved!', 'success');
+                newFarmerPage.style.display = 'none';
+                dashboardPage.style.display = 'block';
+                newFarmerForm.reset();
+            });
+
+            document.getElementById('addPrescriptionBtn').addEventListener('click', () => {
+                prescriptionForm.reset();
+                addPrescriptionModal.style.display = 'flex';
+            });
+
+            prescriptionForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const newPrescription = {
+                    farmerName: document.getElementById('farmerName').value,
+                    animalName: document.getElementById('animalName').value,
+                    animalId: document.getElementById('animalId').value,
+                    species: document.getElementById('species').value,
+                    age: document.getElementById('age').value,
+                    drugName: document.getElementById('drugName').value,
+                    treatmentDate: document.getElementById('treatmentDate').value,
+                    dose: document.getElementById('dose').value,
+                    frequency: document.getElementById('frequency').value,
+                    route: document.getElementById('route').value,
+                    reason: document.getElementById('reason').value,
+                };
+                allPrescriptions.push(newPrescription);
+                showNotification('Treatment record saved successfully!', 'success');
+                addPrescriptionModal.style.display = 'none';
+            });
+
+            prescriptionForm.querySelector('.btn-upload').addEventListener('click', () => {
+                addPrescriptionModal.style.display = 'none';
+                scanPrescriptionModal.style.display = 'flex';
+            });
+
+
+            scanBtn.addEventListener('click', () => {
+                scanPrescriptionModal.style.display = 'flex';
+            });
+            
+            // --- Tesseract.js OCR Logic ---
+            function showLoader(text) {
+                loaderText.textContent = text;
+                loaderOverlay.style.display = 'flex';
+            }
+
+            function hideLoader() {
+                loaderOverlay.style.display = 'none';
+            }
+            
+            function parseOcrText(text) {
+                const data = {};
+                const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+
+                const keywords = {
+                    farmerName: ['farmer name', 'farmer', 'owner'],
+                    animalName: ['animal name', 'animal'],
+                    animalId: ['animal id', 'id'],
+                    species: ['species'],
+                    age: ['age'],
+                    drugName: ['drug name', 'drug', 'medication', 'medicine'],
+                    dose: ['dose', 'dosage'],
+                    frequency: ['frequency'],
+                    route: ['route'],
+                    reason: ['reason', 'diagnosis', 'condition'],
+                    treatmentDate: ['date', 'treatment date']
+                };
+
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    let foundMatchForLine = false;
+
+                    for (const key in keywords) {
+                        if (data[key]) continue; // Already found this key, skip.
+
+                        for (const keyword of keywords[key]) {
+                            const valueRegex = new RegExp(`\\b${keyword}\\b[\\s:.-]+(.*)`, 'i');
+                            const valueMatch = line.match(valueRegex);
+
+                            // Case 1: Keyword and value on the same line
+                            if (valueMatch && valueMatch[1]) {
+                                data[key] = valueMatch[1].trim();
+                                foundMatchForLine = true;
+                                break;
+                            }
+
+                            // Case 2: Keyword is the entire line
+                            const keywordOnlyRegex = new RegExp(`^${keyword}[\\s:.-]*$`, 'i');
+                            if (line.match(keywordOnlyRegex) && i + 1 < lines.length) {
+                                const nextLine = lines[i + 1];
+                                let isNextLineKeyword = false;
+                                // Check if the next line is just another keyword
+                                for (const k_check in keywords) {
+                                    for (const kw_check of keywords[k_check]) {
+                                        if (nextLine.toLowerCase().match(new RegExp(`^${kw_check}[\\s:.-]*$`, 'i'))) {
+                                            isNextLineKeyword = true;
+                                            break;
+                                        }
+                                         const valueRegexCheck = new RegExp(`\\b${kw_check}\\b[\\s:.-]+(.*)`, 'i');
+                                         if(nextLine.toLowerCase().match(valueRegexCheck)){
+                                             isNextLineKeyword = true;
+                                             break;
+                                         }
+                                    }
+                                    if (isNextLineKeyword) break;
+                                }
+
+                                if (!isNextLineKeyword) {
+                                    data[key] = nextLine.trim();
+                                    i++; // IMPORTANT: Skip the next line as it's been consumed.
+                                    foundMatchForLine = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (foundMatchForLine) break; // Move to the next line in the outer loop
+                    }
+                }
+
+                // Regex-based search for date if not found by keyword
+                if (!data.treatmentDate) {
+                    const dateRegex = /(\d{1,2}[-/.\s]+\d{1,2}[-/.\s]+\d{2,4})|(\d{4}[-/.\s]+\d{1,2}[-/.\s]+\d{1,2})/;
+                    const match = text.match(dateRegex);
+                    if (match) {
+                        data.treatmentDate = match[0].trim();
+                    }
+                }
+                
+                return data;
+            }
+
+            function populatePrescriptionForm(data) {
+                document.getElementById('farmerName').value = data.farmerName || '';
+                document.getElementById('animalName').value = data.animalName || '';
+                document.getElementById('animalId').value = data.animalId || '';
+                document.getElementById('age').value = data.age ? parseInt(data.age, 10) || '' : '';
+                
+                const drugSelect = document.getElementById('drugName');
+                if (data.drugName) {
+                    let drugFound = false;
+                    for(let i=0; i < drugSelect.options.length; i++){
+                        if(drugSelect.options[i].text.toLowerCase().includes(data.drugName.toLowerCase())){
+                            drugSelect.selectedIndex = i;
+                            drugFound = true;
+                            break;
+                        }
+                    }
+                }
+
+                document.getElementById('dose').value = data.dose || '';
+                document.getElementById('frequency').value = data.frequency || '';
+                document.getElementById('reason').value = data.reason || '';
+                
+                const speciesSelect = document.getElementById('species');
+                if (data.species) {
+                    for(let i=0; i < speciesSelect.options.length; i++){
+                        if(speciesSelect.options[i].text.toLowerCase().includes(data.species.toLowerCase())){
+                            speciesSelect.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+
+                const routeSelect = document.getElementById('route');
+                if (data.route) {
+                     for(let i=0; i < routeSelect.options.length; i++){
+                        if(routeSelect.options[i].text.toLowerCase().includes(data.route.toLowerCase())){
+                            routeSelect.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+                
+                if (data.treatmentDate) {
+                    try {
+                        const dateStr = data.treatmentDate.replace(/[/. ]/g, '-').replace(/--/g, '-');
+                        const parts = dateStr.split('-');
+                        let formattedDate = '';
+                        
+                        if (parts.length === 3) {
+                             if (parts[2] && (parts[2].length === 4 || parts[2].length === 2)) {
+                                const year = parts[2].length === 4 ? parts[2] : `20${parts[2]}`;
+                                formattedDate = `${year}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                            } else if (parts[0].length === 4) {
+                                formattedDate = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+                            }
+                        }
+                        
+                        if (formattedDate && !isNaN(new Date(formattedDate).getTime())) {
+                             document.getElementById('treatmentDate').value = formattedDate;
+                        }
+                    } catch (e) {
+                        console.error("Could not parse date:", data.treatmentDate);
+                    }
+                }
+            }
+            
+            let tesseractWorker = null;
+
+            async function initializeTesseract() {
+                 showLoader('Initializing Scanning API...');
+                 tesseractWorker = await Tesseract.createWorker('eng');
+                 hideLoader();
+            }
+
+            async function scanWithTesseract(image) {
+                if (!tesseractWorker) {
+                    await initializeTesseract();
+                }
+
+                showLoader('Recognizing Text...');
+                try {
+                    const { data: { text } } = await tesseractWorker.recognize(image, 'eng');
+                    hideLoader();
+                    return parseOcrText(text);
+
+                } catch (error) {
+                    console.error("Tesseract Error:", error);
+                    hideLoader();
+                    showNotification('Text recognition failed.', 'error');
+                    return null;
+                }
+            }
+
+
+            // --- Scan/Upload Logic ---
+            const stopCameraStream = () => {
+                if (videoFeed.srcObject) {
+                    videoFeed.srcObject.getTracks().forEach(track => track.stop());
+                    videoFeed.srcObject = null;
+                }
+            };
+
+            document.getElementById('openCameraBtn').addEventListener('click', async () => {
+                scanPrescriptionModal.style.display = 'none';
+                cameraModal.style.display = 'flex';
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                    videoFeed.srcObject = stream;
+                } catch (err) {
+                    console.error("Camera Error:", err);
+                    showNotification('Could not access camera.', 'error');
+                    cameraModal.style.display = 'none';
+                }
+            });
+
+            closeCameraBtn.addEventListener('click', () => {
+                stopCameraStream();
+                cameraModal.style.display = 'none';
+            });
+            
+            captureBtn.addEventListener('click', async () => {
+                const context = photoCanvas.getContext('2d');
+                photoCanvas.width = videoFeed.videoWidth;
+                photoCanvas.height = videoFeed.videoHeight;
+                context.drawImage(videoFeed, 0, 0, photoCanvas.width, photoCanvas.height);
+                const imageDataUrl = photoCanvas.toDataURL('image/jpeg');
+
+                stopCameraStream();
+                cameraModal.style.display = 'none';
+                
+                const scannedData = await scanWithTesseract(imageDataUrl);
+                if (scannedData) {
+                    populatePrescriptionForm(scannedData);
+                    addPrescriptionModal.style.display = 'flex';
+                    showNotification('Scan complete! Please review the details.', 'success');
+                }
+            });
+            
+            document.getElementById('uploadFileBtn').addEventListener('click', () => {
+                fileUploadInput.click();
+            });
+
+            fileUploadInput.addEventListener('change', async (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    scanPrescriptionModal.style.display = 'none';
+                    const scannedData = await scanWithTesseract(file);
+                     if (scannedData) {
+                        populatePrescriptionForm(scannedData);
+                        addPrescriptionModal.style.display = 'flex';
+                        showNotification('Scan complete! Please review the details.', 'success');
+                    }
+                }
+                fileUploadInput.value = ''; 
+            });
+
+
+            appointmentsList.addEventListener('click', (e) => {
+                const locationBtn = e.target.closest('.icon-btn.location');
+                if (locationBtn) {
+                    const card = locationBtn.closest('.appointment-card');
+                    const appointmentId = card.dataset.id;
+                    const appointment = allAppointments.find(a => a.id === appointmentId);
+                    if (appointment && appointment.location) {
+                        const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(appointment.location)}`;
+                        window.open(mapsUrl, '_blank');
+                    } else {
+                        showNotification('Location not specified.', 'error');
+                    }
+                    return;
+                }
+
+                const statusBadge = e.target.closest('.status-badge');
+                if (statusBadge) {
+                    const card = statusBadge.closest('.appointment-card');
+                    const appointmentId = card.dataset.id;
+                    const appointmentIndex = allAppointments.findIndex(a => a.id === appointmentId);
+                    if (appointmentIndex === -1) return;
+
+                    if (statusBadge.classList.contains('status-pending')) {
+                        allAppointments[appointmentIndex].status = 'confirmed';
+                        renderAppointments();
+                        updateQuickStats();
+                    } else if (statusBadge.classList.contains('status-confirmed')) {
+                        paymentModal.style.display = 'flex';
+                        
+                        const handlePaymentSubmit = (submitEvent) => {
+                            submitEvent.preventDefault();
+                            const amount = parseFloat(document.getElementById('paymentAmount').value);
+
+                            if (isNaN(amount) || amount < 0) {
+                                showNotification('Please enter a valid amount.', 'error');
+                                return;
+                            }
+                            
+                            const appointment = allAppointments[appointmentIndex];
+                            
+                            allTransactions.unshift({ 
+                                farmer: appointment.name, 
+                                amount, 
+                                date: new Date().toISOString().split('T')[0] 
+                            });
+                            
+                            renderPaymentTracker();
+                            
+                            const completedAppointment = {
+                                ...appointment,
+                                status: 'completed',
+                                completedDate: new Date().toISOString().split('T')[0]
+                            };
+                            allCases.unshift(completedAppointment);
+                            allAppointments.splice(appointmentIndex, 1);
+
+                            renderRecentCases();
+                            renderAppointments();
+                            updateQuickStats();
+                            
+                            paymentModal.style.display = 'none';
+                            paymentForm.reset();
+                            showNotification('Payment logged successfully!', 'success');
+                        };
+                        
+                        paymentForm.addEventListener('submit', handlePaymentSubmit, { once: true });
+
+                        paymentModal.querySelector('.close-button').addEventListener('click', () => {
+                             paymentForm.removeEventListener('submit', handlePaymentSubmit);
+                         }, { once: true });
+                    }
+                }
+            });
+
+            pendingActionsCard.addEventListener('click', (e) => {
+                 if (e.target.classList.contains('btn-approve')) {
+                    const actionItem = e.target.closest('.action-item');
+                    if (actionItem && actionItem.dataset.farmer) {
+                        const today = new Date();
+                        const tomorrow = new Date(today);
+                        tomorrow.setDate(tomorrow.getDate() + 1);
+                        
+                        const newAppointment = {
+                            id: `apt_${Date.now()}`,
+                            name: actionItem.dataset.farmer,
+                            date: tomorrow.toISOString().split('T')[0],
+                            time: "17:00",
+                            animal: actionItem.dataset.animal,
+                            phone: actionItem.dataset.phone,
+                            location: actionItem.dataset.location,
+                            status: 'confirmed'
+                        };
+                        allAppointments.push(newAppointment);
+                        renderAppointments();
+                        updateQuickStats();
+                        actionItem.remove();
+                    }
+                }
+                if (e.target.classList.contains('btn-decline')) {
+                    showNotification('Request Declined.', 'error');
+                    e.target.closest('.action-item')?.remove();
+                }
+            });
+
+            farmerSearchInput.addEventListener('keyup', () => {
+                const searchTerm = farmerSearchInput.value.toLowerCase();
+                if (farmerDetailsContainer.style.display === 'block') {
+                    farmerDetailsContainer.style.display = 'none';
+                    farmerList.style.display = 'block';
+                }
+                allFarmerItems.forEach(item => {
+                    const name = item.dataset.name.toLowerCase();
+                    const location = item.dataset.location.toLowerCase();
+                    item.style.display = (name.includes(searchTerm) || location.includes(searchTerm)) ? 'block' : 'none';
+                });
+            });
+
+            farmerList.addEventListener('click', (e) => {
+                const item = e.target.closest('.farmer-list-item');
+                if (item) {
+                    const name = item.dataset.name;
+                    const location = item.dataset.location;
+                    displayFarmerDetails(name, location);
+                }
+            });
+            
+            function displayFarmerDetails(farmerName, location) {
+                farmerList.style.display = 'none';
+                farmerSearchInput.style.display = 'none';
+
+                const farmerAppointments = allAppointments.filter(a => a.name === farmerName);
+                const farmerCases = allCases.filter(c => c.name === farmerName);
+                const farmerPrescriptions = allPrescriptions.filter(p => p.farmerName === farmerName);
+
+                let appointmentsHTML = farmerAppointments.map(a => `
+                    <div class="record-card">
+                        <p><strong><i class="fas fa-calendar-check"></i> Appointment for ${a.animal}</strong></p>
+                        <p class="record-meta">${a.date} at ${formatTime(a.time)} - Status: ${a.status}</p>
+                    </div>`).join('');
+                if(!appointmentsHTML) appointmentsHTML = `<p class="no-records">No upcoming appointments.</p>`;
+
+                let casesHTML = farmerCases.map(c => `
+                    <div class="record-card">
+                        <p><strong><i class="fas fa-history"></i> Visit for ${c.animal}</strong></p>
+                        <p class="record-meta">Completed on ${c.completedDate}</p>
+                    </div>`).join('');
+                if(!casesHTML) casesHTML = `<p class="no-records">No past cases found.</p>`;
+                
+                let prescriptionsHTML = farmerPrescriptions.map(p => `
+                    <div class="record-card">
+                        <p><strong><i class="fas fa-file-prescription"></i> Prescription for ${p.animalName} (${p.animalId})</strong></p>
+                        <p>Drug: ${p.drugName} | Dose: ${p.dose}</p>
+                        <p class="record-meta">Prescribed on ${p.treatmentDate}</p>
+                    </div>`).join('');
+                if(!prescriptionsHTML) prescriptionsHTML = `<p class="no-records">No prescriptions logged.</p>`;
+
+                farmerDetailsContainer.innerHTML = `
+                    <h4>${farmerName}</h4>
+                    <p><i class="fas fa-map-marker-alt"></i> ${location}</p>
+                    
+                    <div class="record-section">
+                        <h5>Upcoming Appointments</h5>
+                        ${appointmentsHTML}
+                    </div>
+
+                    <div class="record-section">
+                        <h5>Case History</h5>
+                        ${casesHTML}
+                    </div>
+
+                    <div class="record-section">
+                        <h5>Logged Prescriptions</h5>
+                        ${prescriptionsHTML}
+                    </div>
+
+                    <div class="action-buttons" style="margin-top: 20px;">
+                        <button class="btn-primary">Add New Record</button>
+                        <button class="btn-secondary" id="searchAgainBtn">Search Again</button>
+                    </div>
+                `;
+                farmerDetailsContainer.style.display = 'block';
+            }
+
+            farmerPortal.addEventListener('click', (e) => {
+                if (e.target.id === 'searchAgainBtn') {
+                    farmerDetailsContainer.style.display = 'none';
+                    farmerSearchInput.value = '';
+                    farmerSearchInput.style.display = 'block';
+                    farmerList.style.display = 'block';
+                    allFarmerItems.forEach(item => item.style.display = 'block');
+                    farmerSearchInput.focus();
+                }
+            });
+            
+            function renderPaymentTracker() {
+                const totalEarnings = allTransactions.reduce((sum, trans) => sum + trans.amount, 0);
+
+                let transactionsHTML = allTransactions.slice(0, 3).map(trans => `
+                    <div class="transaction-item">
+                        <div class="transaction-details">
+                            <p class="transaction-farmer">${trans.farmer}</p>
+                            <p class="transaction-date">${trans.date}</p>
+                        </div>
+                        <p class="transaction-amount">₹${trans.amount.toLocaleString()}</p>
+                    </div>
+                `).join('');
+
+                serviceTypeCard.id = 'paymentTrackerCard';
+                serviceTypeCard.className = 'dashboard-card';
+
+                serviceTypeCard.innerHTML = `
+                    <h3><i class="fas fa-wallet"></i> Payment Tracker</h3>
+                    <div class="transaction-list">
+                        ${transactionsHTML || '<p class="no-records">No recent transactions.</p>'}
+                    </div>
+                    <div class="total-earnings">
+                        <span class="total-label">Total Earnings</span>
+                        <span class="total-amount">₹${totalEarnings.toLocaleString()}</span>
+                    </div>
+                    <button id="viewAllTransactionsBtn" class="btn-secondary full-width">View All Transactions</button>
+                `;
+
+                document.getElementById('viewAllTransactionsBtn').addEventListener('click', () => {
+                    showNotification('Viewing full transaction history...');
+                });
+            }
+
+            function formatTime(timeString) {
+                if (!timeString) return '';
+                let [hours, minutes] = timeString.split(':');
+                const ampm = hours >= 12 ? 'PM' : 'AM';
+                hours = hours % 12;
+                hours = hours ? hours : 12; 
+                return `${hours.toString().padStart(2, '0')}:${minutes.padStart(2, '0')} ${ampm}`;
+            }
+            
+            function renderAppointments() {
+                appointmentsList.innerHTML = '';
+                // Only show appointments for today
+                const today = new Date().toISOString().split('T')[0];
+                const todayAppointments = allAppointments.filter(a => a.date === today);
+
+                if (todayAppointments.length === 0) {
+                     appointmentsList.innerHTML = `<p style="text-align:center; color:#888; padding: 10px 0;">No appointments scheduled for today.</p>`;
+                } else {
+                    todayAppointments.sort((a,b) => a.time.localeCompare(b.time)).forEach(appointment => {
+                        const formattedTime = formatTime(appointment.time);
+                        const newAppointmentEl = document.createElement('div');
+                        const statusClass = `status-${appointment.status}`;
+
+                        newAppointmentEl.className = 'appointment-card';
+                        newAppointmentEl.dataset.id = appointment.id;
+                        newAppointmentEl.innerHTML = `
+                            <div class="appointment-time-status">
+                                <span class="appointment-time">${formattedTime}</span>
+                                <span class="status-badge ${statusClass}">${appointment.status}</span>
+                            </div>
+                            <div class="appointment-details">
+                                <h4>${appointment.name} (${appointment.animal || 'Animal'})</h4>
+                                <p>${appointment.phone || '+91 00000 00000'}</p>
+                                <p class="appointment-location"><i class="fas fa-map-marker-alt"></i> ${appointment.location || 'Not specified'}</p>
+                            </div>
+                            <div class="appointment-actions">
+                                <button class="icon-btn location"><i class="fas fa-map-pin"></i></button>
+                            </div>`;
+                        appointmentsList.appendChild(newAppointmentEl);
+                    });
+                }
+            }
+            
+            function renderRecentCases() {
+                recentCasesList.innerHTML = '';
+                if(allCases.length === 0){
+                     recentCasesList.innerHTML = `<p style="text-align: center; color: #888;">No recent cases to show.</p>`;
+                     return;
+                }
+                allCases.forEach(caseData => {
+                    const newCase = document.createElement('div');
+                    newCase.className = 'case-card';
+                    const statusClass = `status-${caseData.status}`;
+
+                    newCase.innerHTML = `
+                        <div class="case-icon">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <div class="case-details">
+                            <h4>Visit - ${caseData.name}</h4>
+                            <p>${caseData.animal} • ${caseData.completedDate}</p>
+                        </div>
+                        <span class="status-badge ${statusClass}">${caseData.status}</span>
+                    `;
+                    recentCasesList.appendChild(newCase);
+                });
+            }
+
+            function addFarmerToSearchList(name, location) {
+                // Check if farmer already exists
+                const existing = [...allFarmerItems].find(item => item.dataset.name.toLowerCase() === name.toLowerCase());
+                if (existing) {
+                    showNotification('Farmer with this name already exists.', 'error');
+                    return;
+                }
+
+                const newFarmerElement = document.createElement('div');
+                newFarmerElement.className = 'farmer-list-item';
+                newFarmerElement.dataset.name = name;
+                newFarmerElement.dataset.location = location;
+                newFarmerElement.innerHTML = `<h4>${name}</h4><p><i class="fas fa-map-marker-alt"></i> ${location}</p>`;
+                farmerList.appendChild(newFarmerElement);
+                allFarmerItems = farmerList.querySelectorAll('.farmer-list-item'); // Refresh the list
+            }
+            
+            function updateQuickStats() {
+                const today = new Date().toISOString().split('T')[0];
+                const confirmedToday = allAppointments.filter(a => a.date === today && a.status === 'confirmed').length;
+                const pendingToday = allAppointments.filter(a => a.date === today && a.status === 'pending').length;
+                
+                visitsCountEl.textContent = confirmedToday;
+                completedCountEl.textContent = allCases.length;
+                pendingCountEl.textContent = pendingToday;
+            }
+
+            function populateInitialData() {
+                const today = new Date().toISOString().split('T')[0];
+                allAppointments = [
+                    { id: 'apt_1', name: 'Ram Kumar', date: today, time: '10:00', location: 'Sundarpur', animal: 'Cow', phone: '+91 98765 43210', status: 'confirmed' },
+                    { id: 'apt_2', name: 'Sita Devi', date: today, time: '14:00', location: 'Ramgarh', animal: 'Buffalo', phone: '+91 91234 56789', status: 'pending' },
+                ];
+                allCases = [
+                     { id: 'apt_3', name: 'Mohan Singh', date: '2025-09-27', time: '16:30', location: 'Krishnapet', animal: 'Goat', phone: '+91 99887 76655', status: 'completed', completedDate: '2025-09-27' }
+                ];
+                 allTransactions = [
+                    { farmer: 'Mohan Singh', amount: 1200, date: '2025-09-27' },
+                    { farmer: 'Priya Sharma', amount: 500, date: '2025-09-26' },
+                    { farmer: 'Rajesh Kumar', amount: 750, date: '2025-09-25' },
+                ];
+
+                renderAppointments();
+                renderRecentCases();
+                renderPaymentTracker();
+                updateQuickStats();
+            }
+
+            // Initial Setup
+            initializeTesseract().catch(console.error);
+            populateInitialData();
+        });
+    </script>
+</body>
+</html>
+
