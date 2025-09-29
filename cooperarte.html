@@ -66,7 +66,7 @@
                         <button id="corporative-btn" class="w-full bg-blue-500 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-600 transition duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
                             Corporative
                         </button>
-                        <button onclick="window.location.href='rnd.html'" id="research-btn" class="w-full bg-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-lg hover:bg-gray-300 transition duration-300 focus:outline-none focus:ring-2 focus:ring-gray-400">
+                        <button id="research-btn" class="w-full bg-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-lg hover:bg-gray-300 transition duration-300 focus:outline-none focus:ring-2 focus:ring-gray-400">
                             Research & Development
                         </button>
                     </div>
@@ -908,7 +908,7 @@
                         initPutturChart();
                         isChartInitialized = true;
                     }
-                }, 150); // A small delay ensures the view is rendered
+                }, 350); // Increased delay to ensure container is rendered
 
             } else {
                 // Using a custom modal/alert in the future would be better than window.alert
@@ -1042,8 +1042,8 @@
 
             const heatPoints = amrData.map(p => [p.lat, p.lng, p.value / 100]);
             
-            // FIX: Wait for the map to confirm it's loaded and sized before adding the heat layer.
-            map.whenReady(function() {
+            // FIX: Wait for the map to fully load before adding the heat layer.
+            map.on('load', function() {
                 L.heatLayer(heatPoints, { radius: 45, blur: 35, maxZoom: 18, max: 1.0, gradient: { 0.2: '#000080', 0.4: '#00ff00', 0.6: '#ffff00', 0.8: '#ffa500', 1.0: '#ff0000' } }).addTo(map);
             });
             
